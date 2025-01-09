@@ -16,7 +16,7 @@ const MainLayout = () => {
   
   return (
     <>
-    <NavBar username={user?.name} email={user?.email} handleSignOut={handleSignOut}/>
+    <NavBar username={user?.displayName} email={user?.email} handleSignOut={handleSignOut}/>
     <main>
       <Outlet />
     </main>

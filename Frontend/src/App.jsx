@@ -12,6 +12,8 @@ import ProfilePage from './pages/ProfilePage/ProfilePage'
 import ProtectedRoute from './components/ProtectedRoute/ProtectedRoute'
 import AuthLayout from './layouts/AuthLayout'
 import MainLayout from './layouts/MainLayout'
+import ChefLoginPage from './pages/ChefLoginPage/ChefLoginPage'
+import ChefSignUpPage from './pages/ChefSignUpPage/ChefSignUpPage'
 
 
 
@@ -54,6 +56,9 @@ function App() {
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
+          <Route path='/cheflogin' element={<ChefLoginPage/>}/>
+          <Route path='/chefsignup' element={<ChefSignUpPage/>}/>
+
         </Route>
       </Routes>
     </div>

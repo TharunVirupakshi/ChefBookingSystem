@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import Toast from "../../components/Toast/Toast";
 import {Link,useNavigate} from 'react-router-dom'
 
-function LoginPage() {
+function ChefLoginPage() {
     const navigate = useNavigate();
     const [toast, setToast] = useState({ type: "", message: "" });
     const [isToastVisible, setIsToastVisible] = useState(false);
@@ -44,24 +44,24 @@ function LoginPage() {
     }, [timeoutId]);
     
 
-  const handleSubmit = (values, { setSubmitting }) => {
-    // Firebase authentication
-    signInWithEmailAndPassword(auth, values.email, values.password)
-      .then((userCredential) => {
-        const user = userCredential.user;
-        navigate("/", { replace: true });
-        console.log("User signed in:", user);
-        showToast("success", "Login successful!");
+//   const handleSubmit = (values, { setSubmitting }) => {
+//     // Firebase authentication
+//     signInWithEmailAndPassword(auth, values.email, values.password)
+//       .then((userCredential) => {
+//         const user = userCredential.user;
+//         navigate("/", { replace: true });
+//         console.log("User signed in:", user);
+//         showToast("success", "Login successful!");
        
-      })
-      .catch((error) => {
-        console.error("Authentication error:", error.message);
-        showToast("error", `Error: ${error.message}`);
-      })
-      .finally(() => {
-        setSubmitting(false);
-      });
-  };
+//       })
+//       .catch((error) => {
+//         console.error("Authentication error:", error.message);
+//         showToast("error", `Error: ${error.message}`);
+//       })
+//       .finally(() => {
+//         setSubmitting(false);
+//       });
+//   };
 
   const initialValues = {
     email: "",
@@ -74,7 +74,7 @@ function LoginPage() {
         <Toast type={toast.type} message={toast.message} onClose={()=> setIsToastVisible(false)}/>
       }
       <div className="w-full flex flex-col max-w-sm p-4 bg-white border border-gray-200 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700">
-        <Formik initialValues={initialValues} onSubmit={handleSubmit}>
+        <Formik initialValues={initialValues}>
           {({ isSubmitting }) => (
             <Form className="space-y-6">
               <h5 className="text-xl font-medium text-gray-900 dark:text-white">
@@ -121,23 +121,23 @@ function LoginPage() {
                 disabled={isSubmitting}
                 className="w-full text-secondary bg-amber-300 hover:bg-yellow-300 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
               >
-                {isSubmitting ? "Signing in..." : "Login to your account"}
+                {isSubmitting ? "Signing in..." : "Login to your chef account"}
               </button>
 
               {/* Register Link */}
               <div className="text-xs font-normal text-gray-500 dark:text-gray-300">
                 Not registered?{" "}
                 <Link
-                to="/signup"
+                to="/chefsignup"
                   className="text-blue-700 hover:underline dark:text-blue-500"
                 >
-                  Create account
+                  Create Chef account
                 </Link>
                 <br/>
-                Are you a chef?{" "}
+                 Not a chef?{" "}
                 <Link
                   className="text-blue-700 hover:underline dark:text-blue-500 cursor-pointer"
-                 to='/cheflogin'
+                to='/login'
                 >
                   Login here
                 </Link>
@@ -150,4 +150,4 @@ function LoginPage() {
   );
 }
 
-export default LoginPage;
+export default ChefLoginPage;

@@ -1,6 +1,4 @@
 const express = require('express');
-
-
 const app = express()
 const router = express.Router()
 app.use(express.json())
@@ -10,6 +8,9 @@ const client = require('./config/db');
 client.connect()
     .then(()=>console.log("Connected to Postgres"))
     .catch(e => console.log("Error: ", e))
+
+const { setupAdminRoles } = require('./config/firebase');
+setupAdminRoles('PYo2y4k8CRNWGMb8aioxuUQ2XHf2'); // Run Only once
 
 
 app.get('/', (req, res) => {

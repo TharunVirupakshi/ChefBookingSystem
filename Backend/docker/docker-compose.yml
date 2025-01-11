@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis/redis-stack:latest  # Correct Redis Stack image
+    container_name: redis_stack
+    ports:
+      - "6379:6379"   # Redis data port
+      - "8001:8001"   # RedisInsight UI (built into Redis Stack)
+    volumes:
+      - redis_data:/data
+    restart: always
+
+volumes:
+  redis_data:

@@ -14,6 +14,7 @@ import AuthLayout from './layouts/AuthLayout'
 import MainLayout from './layouts/MainLayout'
 import ChefLoginPage from './pages/ChefLoginPage/ChefLoginPage'
 import ChefSignUpPage from './pages/ChefSignUpPage/ChefSignUpPage'
+import { listenForMessages, requestPermission } from './services/notificationService'
 
 
 
@@ -35,7 +36,10 @@ function App() {
   const isLoggedIn = useMemo(() => !!user, [user]); // Avoid re-computation
 
  
-
+  useEffect(()=>{
+    requestPermission(1)
+    listenForMessages()
+  }, [])
 
   
 

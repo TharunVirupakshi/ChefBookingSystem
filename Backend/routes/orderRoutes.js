@@ -3,7 +3,8 @@ const router = express.Router();
 const client = require('../config/db'); 
 const Joi = require('joi');
 
-const redisService = require('../services/redisService')
+const redisService = require('../services/redisService');
+const { sendFCMNotification } = require('../services/notificationService');
 
 
 router.get('/', async (req, res) => {
@@ -87,6 +88,12 @@ router.post('/instant', async (req, res) => {
             return res.status(400).json({success: false, message: 'Chef is already locked by another request' });
         }
 
+        const fcmToken = await redisService.getFCMToken(chef_id);
+        if (!fcmToken) {
+            await releaseLock(`chef_lock_${chef_id}`);
+            return res.status(400).json({ success: false, message: 'Chef is not registered for notifications' });
+        }
+
         // 3️⃣ Begin Transaction
         await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
 
@@ -110,6 +117,14 @@ router.post('/instant', async (req, res) => {
 
         // 6️⃣ Commit the transaction
         await client.query('COMMIT');
+
+        const notificationData = {
+            chef_id: chef_id.toString(),
+            customer_id: customer_id.toString(),
+            recipe_id: recipe_id.toString(),
+        };
+        
+        await sendFCMNotification(fcmToken, '🍽️ New Instant Booking Request', 'You have a new booking request.', notificationData);
 
         // 7️⃣ Send Notification to Chef (Simulated)
         console.log(`🔔 Notification sent to Chef ID ${chef_id} for instant booking approval.`);

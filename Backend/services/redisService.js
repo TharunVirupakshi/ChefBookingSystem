@@ -17,9 +17,19 @@ async function getChefStatus(chefId) {
     return await redisClient.get(`chef_status_${chefId}`);
 }
 
+async function saveFCMToken(id, token) {
+    await redisClient.set(`fcm_token_${id}`, token);
+    console.log(`🔑 Saved FCM token for ${id}`);
+}
+async function getFCMToken(id) {
+    return await redisClient.get(`fcm_token_${id}`);
+}
+
 module.exports = {
     acquireLock,
     releaseLock,
     updateChefStatus,
-    getChefStatus
+    getChefStatus,
+    saveFCMToken,
+    getFCMToken
 };

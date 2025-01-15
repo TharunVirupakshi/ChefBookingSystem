@@ -4,10 +4,14 @@ import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../Firebase/firebase";
 import { useNavigate } from "react-router-dom";
 
+
+
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+ 
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -19,14 +23,21 @@ export const AuthProvider = ({ children }) => {
         // navigate("/login"); // Redirect if no user
         console.log('[AuthContext] User is null')
       }
+      currentUser?.getIdTokenResult().then(token => console.log('token: ',token))
     });
 
     // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [navigate]);
 
-  const login = async (email, password) => {
-    // Firebase login logic (if needed)
+ 
+
+  const getUserType = async () => {
+      const token = await auth.currentUser.getIdTokenResult();
+      if(token.claims.chef) return 'CHEF';
+      if(token.claims.admin) return 'ADMIN';
+
+      return 'USER';
   };
 
   const logout = async () => {
@@ -36,7 +47,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, getUserType, logout }}>
       {children}
     </AuthContext.Provider>
   );

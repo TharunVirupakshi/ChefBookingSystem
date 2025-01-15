@@ -18,7 +18,7 @@ const NavBar = ({username, email, handleSignOut = ()=>{} ,isShowAvatar = true}) 
   
 
   return (
-    <Navbar fluid rounded>
+    <Navbar fluid rounded  className='bg-amber-300'>
       <Navbar.Brand href="#">
         {/* <img src="/favicon.svg" className="mr-3 h-6 sm:h-9" alt="Flowbite React Logo" /> */}
         <span className="self-center whitespace-nowrap text-xl font-semibold dark:text-white">HireChef</span>

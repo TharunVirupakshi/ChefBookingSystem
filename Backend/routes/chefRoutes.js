@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const client = require('../config/db');
 const { saveFCMToken } = require('../services/redisService');
+const {admin} = require('../config/firebase');
+const Joi = require('joi');
 
 
 router.get('/', async (req, res) => {
@@ -46,5 +48,54 @@ router.post('/update-fcm-token', async(req, res)=>{
     }
 })
 
+
+const chefSignUpValidationSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).required(),
+    name: Joi.string().required()
+})
+
+router.post('/signup', async(req, res)=>{
+
+   const {error, value} = chefSignUpValidationSchema.validate(req.body)
+
+   if (error) {
+    return res.status(400).json({success:false, message: error.details[0].message });
+   }
+
+   const {email,password,name} = value;
+  
+   try{
+    const userCredential = await admin.auth().createUser({email,password,displayName: name});
+
+    await admin.auth().updateUser(userCredential.uid, {displayName: name})
+    await admin.auth().setCustomUserClaims(userCredential.uid, {chef:true})
+    
+
+    // Store details of chef in Postgres
+    const insertQuery = `
+            INSERT INTO chef (chef_id, full_name, email, created_at)
+            VALUES ($1, $2, $3, NOW())
+            RETURNING *;
+        `;
+
+    const result = await client.query(insertQuery, [
+        userCredential.uid,
+        name,
+        email
+    ]);
+    
+    console.log('[INFO] Chef details saved to Postgres:', result.rows[0]);
+
+    res.status(200).json({success: true, messaging: userCredential})
+   }catch (error) {
+    console.error('[ERROR] Failed to signup', error);
+    res.status(500).json({ success: false, message: error });
+}
+  
+    
+
+    
+})
 
 module.exports = router

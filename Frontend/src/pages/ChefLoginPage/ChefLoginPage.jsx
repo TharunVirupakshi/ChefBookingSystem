@@ -44,24 +44,32 @@ function ChefLoginPage() {
     }, [timeoutId]);
     
 
-//   const handleSubmit = (values, { setSubmitting }) => {
-//     // Firebase authentication
-//     signInWithEmailAndPassword(auth, values.email, values.password)
-//       .then((userCredential) => {
-//         const user = userCredential.user;
-//         navigate("/", { replace: true });
-//         console.log("User signed in:", user);
-//         showToast("success", "Login successful!");
-       
-//       })
-//       .catch((error) => {
-//         console.error("Authentication error:", error.message);
-//         showToast("error", `Error: ${error.message}`);
-//       })
-//       .finally(() => {
-//         setSubmitting(false);
-//       });
-//   };
+  const handleSubmit = (values, { setSubmitting }) => {
+    // Firebase authentication
+    signInWithEmailAndPassword(auth, values.email, values.password)
+      .then(async(userCredential) => {
+        const user = userCredential.user;
+
+        const token = await user.getIdTokenResult()
+
+        if(!token.claims.chef){
+          showToast("error", "Not a chef account!"); 
+          return;
+        }
+
+        navigate("/dashboard", { replace: true });
+        console.log("Chef signed in:", user);
+        showToast("success", "Login successful!");
+        
+      })
+      .catch((error) => {
+        console.error("Authentication error:", error.message);
+        showToast("error", `Error: ${error.message}`);
+      })
+      .finally(() => {
+        setSubmitting(false);
+      });
+  };
 
   const initialValues = {
     email: "",
@@ -74,7 +82,7 @@ function ChefLoginPage() {
         <Toast type={toast.type} message={toast.message} onClose={()=> setIsToastVisible(false)}/>
       }
       <div className="w-full flex flex-col max-w-sm p-4 bg-white border border-gray-200 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700">
-        <Formik initialValues={initialValues}>
+        <Formik initialValues={initialValues} onSubmit={handleSubmit}>
           {({ isSubmitting }) => (
             <Form className="space-y-6">
               <h5 className="text-xl font-medium text-gray-900 dark:text-white">

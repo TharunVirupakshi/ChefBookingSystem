@@ -5,13 +5,14 @@ import { Formik, Field, Form } from "formik";
 import { useState, useEffect } from "react";
 import Toast from "../../components/Toast/Toast";
 import {Link,useNavigate} from 'react-router-dom'
+import { useAuth } from "../../context/AuthContext";
 
 function LoginPage() {
     const navigate = useNavigate();
     const [toast, setToast] = useState({ type: "", message: "" });
     const [isToastVisible, setIsToastVisible] = useState(false);
     const [timeoutId, setTimeoutId] = useState(null); // Store the timeout ID 
-
+    const { checkUserType } = useAuth()
 
 
 
@@ -47,8 +48,18 @@ function LoginPage() {
   const handleSubmit = (values, { setSubmitting }) => {
     // Firebase authentication
     signInWithEmailAndPassword(auth, values.email, values.password)
-      .then((userCredential) => {
+      .then(async(userCredential) => {
         const user = userCredential.user;
+        
+        const token = await user.getIdTokenResult()
+        
+        if(token.claims.chef){
+          alert('This is a chef account, login via "/cheflogin" page');
+          navigate('/cheflogin', {replace: true})
+          return
+        }
+        
+
         navigate("/", { replace: true });
         console.log("User signed in:", user);
         showToast("success", "Login successful!");

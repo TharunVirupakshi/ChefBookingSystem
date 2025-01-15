@@ -1,5 +1,5 @@
 import React from 'react'
-import {createUserWithEmailAndPassword} from 'firebase/auth'
+import {createUserWithEmailAndPassword, updateProfile} from 'firebase/auth'
 
 import {Link, useNavigate} from 'react-router-dom'
 import { Field, Form, Formik } from 'formik';
@@ -11,22 +11,37 @@ function ChefSignUpPage() {
     const navigate = useNavigate();
 
 
-const handleSignUp = (email, password) =>{
-    createUserWithEmailAndPassword(auth, email, password)
-  .then((userCredential) => {
-    // Signed up 
-    const user = userCredential.user;
-    navigate("/login", { replace: true });
-    console.log("User created account:", user);
-    
-  })
-  .catch((error) => {
-    const errorCode = error.code;
-    const errorMessage = error.message;
-    console.error("Authentication error:", errorMessage);
-    // ..
-  });
-}
+const handleSignUp = async (name, email, password,passwordConfirm) =>{
+  console.log("SignUp inputs:", { name, email, password ,passwordConfirm});
+
+  try {
+    // API request
+    const response = await fetch("http://localhost:3000/api/chefs/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    // Handle response
+    const data = await response.json();
+
+    if (!response.ok) {
+      console.error("Signup failed:", data.message);
+      alert(data.message || "Failed to sign up. Please try again.");
+      return;
+    }
+
+    console.log("Chef account successfully created:", data);
+
+    navigate("/cheflogin", { replace: true });
+      console.log("Chef created account with profile updated:", data);
+    } catch (error) {
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      console.error("Authentication error:", errorMessage);
+    }
+  };
+
 
 const initialValues = {
   name: "",
@@ -62,7 +77,23 @@ const validationSchema = Yup.object().shape({
         <Toast type={toast.type} message={toast.message} onClose={()=> setIsToastVisible(false)}/>
       } */}
       <div className="w-full flex flex-col max-w-sm p-4 bg-white border border-gray-200 rounded-lg shadow sm:p-6 md:p-8 dark:bg-gray-800 dark:border-gray-700">
-        <Formik initialValues={initialValues} onSubmit={()=>{ }} validationSchema={validationSchema}>
+        <Formik 
+         initialValues={{
+            name: "",
+            email: "",
+            password: "",
+            passwordConfirm: "",
+          }}
+           
+          onSubmit={(values) => {
+            handleSignUp(
+              values.name,
+              values.email,
+              values.password,
+              values.passwordConfirm
+            );
+          }}
+         validationSchema={validationSchema}>
           {({ isSubmitting, errors, touched }) => (
             <Form className="space-y-6">
               <h5 className="text-xl font-medium text-gray-900 dark:text-white">

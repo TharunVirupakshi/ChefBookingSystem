@@ -8,7 +8,7 @@ import { auth } from "../../Firebase/firebase";
   const {user, loading} = useAuth();
 
   if (loading) {
-    return "Loading";
+    return null;
   }
   return user ? <Outlet /> : <Navigate to="/login" replace/>;
 };

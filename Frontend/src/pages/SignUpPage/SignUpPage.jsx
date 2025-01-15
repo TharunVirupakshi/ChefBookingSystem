@@ -12,21 +12,20 @@ function SignUpPage() {
   const handleSignUp = async (name, email, password, passwordConfirm) => {
     try {
       console.log("SignUp inputs:", { name, email, password, passwordConfirm });
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
 
-      // Extract user from userCredential
-      const user = userCredential.user;
-
-      console.log("User created account:", user);
-
-      // Update profile with displayName
-      await updateProfile(user, {
-        displayName: name,
+      const response = await fetch("http://localhost:3000/api/customers/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
       });
+  
+      // Handle response
+      const data = await response.json();
+
+      console.log('data: ', data);
+      const userCredential = data.message;
+
+
       navigate("/login", { replace: true });
       console.log("User created account with profile updated:", user);
     } catch (error) {

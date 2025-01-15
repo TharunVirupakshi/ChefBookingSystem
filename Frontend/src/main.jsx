@@ -15,3 +15,14 @@ createRoot(document.getElementById("root")).render(
     </BrowserRouter>
   </StrictMode>
 );
+
+// ReactDOM.render(
+//   <StrictMode>
+//   <BrowserRouter>
+//     <AuthProvider>
+//       <App />
+//     </AuthProvider>
+//   </BrowserRouter>
+// </StrictMode>,
+// document.getElementById("root")
+// )

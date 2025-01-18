@@ -60,7 +60,7 @@ function LoginPage() {
         }
         
 
-        navigate("/", { replace: true });
+        navigate("/dashboard", { replace: true });
         console.log("User signed in:", user);
         showToast("success", "Login successful!");
        

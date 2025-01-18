@@ -62,9 +62,11 @@ router.get('/:id', async (req, res) => {
 
 // Joi validation
 const instantBookingSchema = Joi.object({
-    chef_id: Joi.number().integer().required(),
-    customer_id: Joi.number().integer().required(),
-    recipe_id: Joi.number().integer().required()
+    chef_id: Joi.string().required(),
+    customer_id: Joi.string().required(),
+    recipe_id: Joi.number().integer().required(),
+    latitude: Joi.number().required(),  // 📍 Latitude
+    longitude: Joi.number().required()  // 📍 Longitude
 });
 
 router.post('/instant', async (req, res) => {
@@ -73,9 +75,13 @@ router.post('/instant', async (req, res) => {
         return res.status(400).json({success:false, message: error.details[0].message });
     }
 
-    const { chef_id, customer_id, recipe_id } = value;
+    const { chef_id, customer_id, recipe_id, latitude, longitude } = value;
 
     try {
+
+        //TODO: Check if recipe is posted by the correct chef
+
+
         // 1️⃣ Check Chef Status in Redis
         const chefStatus = await redisService.getChefStatus(chef_id);
         if (chefStatus !== 'READY') {
@@ -109,6 +115,8 @@ router.post('/instant', async (req, res) => {
             return res.status(400).json({success: false, message: 'Chef is not available for instant booking' });
         }
 
+        //TODO: Check if this instant booking collides with chef's advance booking schedule.
+
         // 5️⃣ Update Chef Status to PENDING
         await client.query(
             'UPDATE chef_status SET instant_book = $1 WHERE chef_id = $2',
@@ -122,6 +130,8 @@ router.post('/instant', async (req, res) => {
             chef_id: chef_id.toString(),
             customer_id: customer_id.toString(),
             recipe_id: recipe_id.toString(),
+            latitude: latitude.toString(),
+            longitude: longitude.toString()
         };
         
         await sendFCMNotification(fcmToken, '🍽️ New Instant Booking Request', 'You have a new booking request.', notificationData);

@@ -29,6 +29,9 @@ app.use('/api/customers', customerRoutes)
 const orderRoutes = require('./routes/orderRoutes')
 app.use('/api/orders', orderRoutes);
 
+const recipeRoutes = require('./routes/recipeRoutes')
+app.use('/api/recipes',recipeRoutes);
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

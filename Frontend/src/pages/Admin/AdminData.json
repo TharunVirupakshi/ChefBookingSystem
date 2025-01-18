@@ -1,0 +1,18 @@
+[
+    {
+     "title":"Manage Recipes",
+     "type":"normal",
+     "path":"/dashboard/admin/recipe"
+    },
+    {
+     "title":"Manage Customers",
+     "type":"normal",
+     "path":"/dashboard/admin/customers"
+    },  
+    {
+     "title":"Manage Orders",
+     "type":"normal",
+     "path":"/dashboard/admin/orders"
+    }
+   
+ ]

@@ -14,7 +14,7 @@ async function sendFCMNotification(token, title, body, data = {}) {
         return { success: true, response };
     } catch (error) {
         console.error(`[ERROR] Failed to send notification: ${error.message}`);
-        return { success: false, error: error.message };
+        throw new Error(error)
     }
 }
 

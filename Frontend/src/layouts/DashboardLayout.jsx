@@ -2,10 +2,13 @@ import React from 'react'
 import { Outlet } from 'react-router-dom';
 import SideNavbar from '../components/SideNavbar/SideNavbar';
 import chefData from '../pages/Chef/ChefData.json'
+import adminData from '../pages/Admin/AdminData.json'
+import { useState } from 'react';
+import { useEffect } from 'react';
 
 
 const DashboardLayout = ({userType}) => {
-
+const [sidebarLinks,setSidebarLinks] = useState([])
 
     /*
         Admin routes:
@@ -18,25 +21,31 @@ const DashboardLayout = ({userType}) => {
         - Overview (to show instant order notifications, current order) (have a button to toggle active status)
         - My orders
     */ 
-console.log('chefdata',chefData)
-
-        let sidebarLinks;
-        switch (userType) {
-          case "CHEF":
-            sidebarLinks = chefData;
-            break;
-          case "ADMIN":
-            sidebarLinks = adminData;
-            break;
-          case "USER":
-            sidebarLinks = userData;
-            break;
-          default:
-            sidebarLinks = [];
-        }
-      
+// console.log('chefdata',chefData)
 
 
+const handleSidebarLinks = () =>{
+  switch (userType) {
+    case "CHEF":
+     setSidebarLinks(chefData);
+      break;
+    case "ADMIN":
+     setSidebarLinks(adminData);
+      break;
+    case "USER":
+     setSidebarLinks(userData);
+      break;
+    default:
+      setSidebarLinks([]);
+  }
+}
+       
+     useEffect(()=>{
+        handleSidebarLinks()
+     },[userType,sidebarLinks]) 
+
+   
+    //  console.log('sidebarLinks...',sidebarLinks)
 
   return (
     <div className="md:flex bg-gray-200 h-screen overflow-hidden">

@@ -1,5 +1,7 @@
 import React from 'react'
 import InstantOderCard from '../../components/InstantOrderCard/InstantOderCard'
+import MapsCard from '../../components/Maps/MapsCard';
+
 import './ChefDashboard.css'
 
 const ChefDashboard = () => {
@@ -10,9 +12,15 @@ const ChefDashboard = () => {
       </h1>
 
 
-      <div className='py-5'>
+      <div className='py-5 flex gap-2'>
         <InstantOderCard />
+
+        <div className='w-full border rounded-lg overflow-hidden'>
+          <MapsCard/>
+        </div>
       </div>
+
+     
     </div>
   );
 }

@@ -4,6 +4,7 @@ const client = require('../config/db');
 const { saveFCMToken } = require('../services/redisService');
 const {admin} = require('../config/firebase');
 const Joi = require('joi');
+const { updateChefStatus } = require('../services/redisService')
 
 
 router.get('/', async (req, res) => {
@@ -46,6 +47,44 @@ router.post('/update-fcm-token', async(req, res)=>{
         console.error('[ERROR] Failed to save FCM token:', error);
         res.status(500).json({ success: false, message: 'Failed to save FCM token' });
     }
+})
+
+router.put('/status', async(req, res) => {
+    const { chef_id, status } = req.body;
+
+    if(!chef_id || !status){
+        return res.status(400).json({ success: false, message: 'chef_id and status are required' }); 
+    }
+
+    const validStatuses = ['READY', 'BUSY'];
+    if (!validStatuses.includes(status.toUpperCase())) {
+        return res.status(400).json({ success: false, message: 'Invalid status. Allowed values are READY or BUSY' });
+    }
+
+
+    try {
+        // 3️⃣ Update the chef's status in Redis
+        
+        await updateChefStatus(chef_id, status.toUpperCase());
+
+        console.log(`🔄 Chef ID ${chef_id} status updated to ${status.toUpperCase()}`);
+
+        // 4️⃣ Respond with success
+        return res.status(200).json({
+            success: true,
+            message: `Chef status updated to ${status.toUpperCase()}`
+        });
+
+    } catch (error) {
+        console.error('❌ Error updating chef status:', error);
+
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to update chef status'
+        });
+    }
+
+
 })
 
 
@@ -91,11 +130,7 @@ router.post('/signup', async(req, res)=>{
    }catch (error) {
     console.error('[ERROR] Failed to signup', error);
     res.status(500).json({ success: false, message: error });
-}
-  
-    
-
-    
+}    
 })
 
 module.exports = router

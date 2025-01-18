@@ -7,7 +7,7 @@ import recipe from '../../../src/assets/sandwich.jpg'
 const InstantOderCard = ({ location, imageUrl, onAccept, onReject }) => {
   return (
     <>
-      <Card className="max-w-xs p-5">
+      <Card className="max-w-xl p-5">
         {/* <div className="flex justify-end">
         <Dropdown inline label="">
           <Dropdown.Item>

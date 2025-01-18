@@ -9,14 +9,17 @@ const MainLayout = () => {
 
   const {user, loading} = useAuth()  
   const navigate = useNavigate();
+
   const handleSignOut = () => {
     signOut(auth);
     navigate('/login', {replace: true});
  }
+
+ 
   
   return (
     <>
-    <NavBar username={user?.displayName} email={user?.email} handleSignOut={handleSignOut}/>
+    <NavBar username={user?.displayName} email={user?.email} handleSignOut={handleSignOut} />
     <main className=''>
       <Outlet />
     </main>

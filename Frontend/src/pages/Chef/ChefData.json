@@ -2,11 +2,11 @@
    {
     "title":"My Orders",
     "type":"normal",
-    "path":""
+    "path":"/dashboard/chef/orders"
    },
    {
     "title":"My Recipes",
     "type":"normal",
-    "path":""
+    "path":"/dashboard/chef/recipe"
    }  
 ]

@@ -1,10 +1,15 @@
 const {admin} = require('../config/firebase')
+const { v4: uuidv4} = require('uuid')
 
 // Send FCM Notification
 async function sendFCMNotification(token, title, body, data = {}) {
+    const notificationId = uuidv4(); 
     const message = {
         notification: { title, body },
-        data,
+        data: {
+            ...data,
+            notification_id: notificationId
+        },
         token,
     };
 

@@ -20,18 +20,18 @@ import AuthLayout from "./layouts/AuthLayout";
 import MainLayout from "./layouts/MainLayout";
 import ChefLoginPage from "./pages/ChefLoginPage/ChefLoginPage";
 import ChefSignUpPage from "./pages/ChefSignUpPage/ChefSignUpPage";
-import {
-  listenForMessages,
-  requestPermission,
-} from "./services/notificationService";
+
 import DashboardLayout from "./layouts/DashboardLayout";
-import ChefDashboard from "./pages/Chef/ChefDashboard";
 import NotFound from "./pages/NotFound";
 import AdminDashboard from "./pages/Admin/AdminDashboard/AdminDashboard";
 import ManageRecipes from "./pages/Admin/ManageRecipes/ManageRecipes";
 import ManageCustomers from "./pages/Admin/ManageCustomers/ManageCustomers";
 import ManageOrders from "./pages/Admin/ManageOrders/ManageOrders";
 import { initFlowbite } from "flowbite"
+import { useNotification } from "./context/NotificationsContext";
+import ManageChefRecipes from "./pages/Chef/ManageChefRecipes/ManageChefRecipes";
+import ManageChefOrders from "./pages/Chef/ManageChefOrders/ManageChefOrders";
+import ChefDashboard from "./pages/Chef/ChefDashboard/ChefDashboard";
 function App() {
   const navigate = useNavigate();
   const [userType, setUserType] = useState(null);
@@ -40,6 +40,7 @@ function App() {
   // const [curUser, setCurUser] = useState(null);
 
   const { user, loading, getUserType } = useAuth();
+  const { requestPermission } = useNotification()
 
   useEffect(()=>{
     initFlowbite()
@@ -60,10 +61,11 @@ function App() {
 
     if(auth.currentUser?.uid){
       requestPermission(auth.currentUser.uid);
-      listenForMessages();
     }
 
   }, []);
+
+
 
   useEffect(() => {
     const fetchUserType = async () => {
@@ -91,7 +93,11 @@ function App() {
                 path="/dashboard"
                 element={<DashboardLayout userType={userType} />}
               >
-                <Route path="chef" element={<ChefDashboard />} />
+                <Route path="chef" element={<ChefDashboard/>}>
+                  <Route index element={<Navigate to="orders" replace />} /> 
+                  <Route path="orders" element={<ManageChefOrders/>}/>
+                  <Route path="recipe" element={<ManageChefRecipes/>}/>
+                </Route>
                 <Route path="admin" element={<AdminDashboard />}>
                   <Route index element={<Navigate to="recipe" replace />} />
                   <Route path="recipe" element={<ManageRecipes />} />

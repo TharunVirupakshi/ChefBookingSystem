@@ -79,7 +79,24 @@ router.post('/instant', async (req, res) => {
 
     try {
 
-        //TODO: Check if recipe is posted by the correct chef
+        // 0️⃣ Check if the recipe belongs to the chef and get the recipe title
+        const recipeResult = await client.query(
+            `SELECT title 
+             FROM recipe 
+             WHERE recipe_id = $1 AND chef_id = $2 
+             LIMIT 1`,  // Explicitly limit to 1 for safety
+            [recipe_id, chef_id]
+        );
+        
+        if (recipeResult.rowCount === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid recipe or the recipe does not belong to this chef.'
+            });
+        }
+        
+        const recipeTitle = recipeResult.rows[0].title;
+
 
 
         // 1️⃣ Check Chef Status in Redis
@@ -109,6 +126,12 @@ router.post('/instant', async (req, res) => {
             [chef_id]
         );
 
+
+        
+        //TODO: If status is BOOKED, send error. 
+        // If status is PENDING, check NOW() - updated_at > 2mins, if so allow.
+        
+
         if (statusResult.rows[0].instant_book !== 'AVAILABLE') {
             await client.query('ROLLBACK');
             await redisService.releaseLock(`chef_lock_${chef_id}`);
@@ -123,6 +146,8 @@ router.post('/instant', async (req, res) => {
             ['PENDING', chef_id]
         );
 
+
+
         // 6️⃣ Commit the transaction
         await client.query('COMMIT');
 
@@ -130,8 +155,10 @@ router.post('/instant', async (req, res) => {
             chef_id: chef_id.toString(),
             customer_id: customer_id.toString(),
             recipe_id: recipe_id.toString(),
+            recipe_title: recipeTitle.toString(),
             latitude: latitude.toString(),
-            longitude: longitude.toString()
+            longitude: longitude.toString(),
+            type: "INSTANT_BOOKING"
         };
         
         await sendFCMNotification(fcmToken, '🍽️ New Instant Booking Request', 'You have a new booking request.', notificationData);

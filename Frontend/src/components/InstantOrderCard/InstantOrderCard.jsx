@@ -4,10 +4,10 @@ import { Card, Dropdown } from "flowbite-react";
 import recipe from '../../../src/assets/sandwich.jpg'
 
 
-const InstantOderCard = ({ location, imageUrl, onAccept, onReject }) => {
+const InstantOrderCard = ({ location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{} }) => {
   return (
     <>
-      <Card className="max-w-xl p-5">
+      <Card className="max-w-lg p-5">
         {/* <div className="flex justify-end">
         <Dropdown inline label="">
           <Dropdown.Item>
@@ -42,8 +42,9 @@ const InstantOderCard = ({ location, imageUrl, onAccept, onReject }) => {
             src={recipe}
             className="mb-3 rounded-full aspect-square w-40 shadow-lg"
           />
+          <div className='text-center w-[250px]'>
           <h5 className="mb-1 text-xl font-medium text-gray-900 dark:text-white">
-            Garlic Cheese Toast
+            {title}
           </h5>
          
             <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -62,23 +63,23 @@ const InstantOderCard = ({ location, imageUrl, onAccept, onReject }) => {
                 clip-rule="evenodd"
               />
             </svg>
-
-            Koramangla
+            <br></br>
+            {location}
           </span>
-          
+          </div>
           <div className="mt-4 flex space-x-3 lg:mt-6">
-            <a
-              href="#"
-              className="inline-flex items-center rounded-lg bg-amber-300 px-4 py-2 text-center text-sm font-medium text-secondary hover:bg-yellow-300 focus:outline-none focus:ring-4 focus:ring-cyan-300 dark:bg-cyan-600 dark:hover:bg-cyan-700 dark:focus:ring-cyan-800"
+            <div 
+              className="cursor-pointer inline-flex items-center rounded-lg bg-amber-300 px-4 py-2 text-center text-sm font-medium text-secondary hover:bg-yellow-300 focus:outline-none focus:ring-4 focus:ring-cyan-300 dark:bg-cyan-600 dark:hover:bg-cyan-700 dark:focus:ring-cyan-800"
+              onClick={onAccept}
             >
               Accept
-            </a>
-            <a
-              href="#"
-              className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-gray-700 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+            </div>
+            <div
+              onClick={onReject}
+              className="cursor-pointer inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-gray-700 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
             >
               Reject
-            </a>
+            </div>
           </div>
         </div>
       </Card>
@@ -86,4 +87,4 @@ const InstantOderCard = ({ location, imageUrl, onAccept, onReject }) => {
   );
 }
 
-export default InstantOderCard
+export default InstantOrderCard

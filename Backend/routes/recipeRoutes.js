@@ -36,6 +36,7 @@ const recipeCreateValidationSchema = Joi.object({
   booking_type: Joi.string()
     .valid("instant", "advance") // Updated to match the database constraint
     .required(),
+  image_url:Joi.string()
 });
 
 // Schema for updating a recipe (PUT)
@@ -53,6 +54,7 @@ const recipeUpdateValidationSchema = Joi.object({
   price: Joi.number().positive().precision(2),
   is_vegetarian: Joi.boolean(),
   booking_type: Joi.string().valid("instant", "advance"), // Updated to match the database constraint
+  image_url:Joi.string()
 });
 
 
@@ -74,11 +76,12 @@ router.post("/", async (req, res) => {
     price,
     is_vegetarian,
     booking_type,
+    image_url
   } = value;
   try {
     const query = `
-            INSERT INTO recipe (chef_id, title, description, ingredients, preparation_time, price, is_vegetarian, booking_type)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO recipe (chef_id, title, description, ingredients, preparation_time, price, is_vegetarian, booking_type, image_url)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING *;
         `;
 
@@ -91,6 +94,7 @@ router.post("/", async (req, res) => {
       price,
       is_vegetarian,
       booking_type,
+      image_url
     ]);
     console.log("Recipe got saved to Postgres:", result.rows[0]);
     return res.status(200).json({
@@ -135,6 +139,7 @@ router.put("/", async (req, res) => {
     price,
     is_vegetarian,
     booking_type,
+    image_url
   } = value;
 
   try {
@@ -177,6 +182,11 @@ router.put("/", async (req, res) => {
       values.push(booking_type);
       index++;
     }
+    if (image_url !== undefined) {
+      updateQuery += `image_url = $${index}, `;
+      values.push(image_url);
+      index++;
+    }
 
     updateQuery = updateQuery.slice(0, -2) + ` WHERE recipe_id = $${index}`;
     values.push(recipeId);
@@ -206,9 +216,13 @@ router.delete("/", async (req, res) => {
   const recipeId = req.query.recipe_id;
   console.log("Deleting recipe with ID:", recipeId);
   try {
-    const query = `
-    
-  `;
+   // Update the 'deleted_at' column with the current timestamp for the given recipe_id
+   const query = `
+      UPDATE recipes
+      SET deleted_at = NOW()
+      WHERE id = $1
+      RETURNING *;
+    `;
     const result = await client.query(query, [recipeId]);
     if (result.rowCount === 0) {
       return res.status(404).json({

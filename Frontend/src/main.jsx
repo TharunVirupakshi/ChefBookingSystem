@@ -5,12 +5,15 @@ import App from './App.jsx'
 import {BrowserRouter} from 'react-router-dom'
 import 'flowbite'
 import { AuthProvider } from './context/AuthContext'
+import { NotificationProvider } from './context/NotificationsContext'
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <NotificationProvider>
         <App />
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>

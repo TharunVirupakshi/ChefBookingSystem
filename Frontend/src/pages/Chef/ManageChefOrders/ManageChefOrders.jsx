@@ -8,6 +8,7 @@ const ManageChefOrders = () => {
   const [instantBookingNotification, setInstantBookingNotification] = useState(null);
   const [locationName, setLocationName] = useState("Loading location...");
   const { notifications, clearNotification } = useNotification();
+  const [ttl, setTtl] = useState(0)
 
   // Google Maps Geocoding API Key
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_JS_API_KEY;
@@ -53,23 +54,55 @@ function getAllSublocalityNames(geocodeResults) {
 
   // Load the single Instant Booking notification
   useEffect(() => {
-    const latestInstantBooking = notifications.find(
+    const latestInstantBooking = notifications.filter(
       (notif) =>
         notif.type &&
         notif.type.toUpperCase() === "INSTANT_BOOKING" &&
         notif.data?.notification_id
-    );
+    ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0]; // Take the most recent one
 
     if (latestInstantBooking) {
+
+      // Send API req to see if the req is still valid. 
+
       setInstantBookingNotification(latestInstantBooking);
 
       const lat = parseFloat(latestInstantBooking.data.latitude);
       const lng = parseFloat(latestInstantBooking.data.longitude);
 
       // Trigger reverse geocoding
-      // if (lat && lng) {
-      //   reverseGeocode(lat, lng);
-      // }
+      if (lat && lng) {
+        reverseGeocode(lat, lng);
+      }
+
+      // Initialize SSE for TTL updates
+      const eventSource = new EventSource(
+      `http://localhost:3000/api/orders/sse/instant-booking/${latestInstantBooking.data.chef_id}`
+      );
+
+      eventSource.onmessage = (event) => {
+        const { ttl, expired } = JSON.parse(event.data);
+
+        // Update TTL in state
+        if (expired) {
+          setTtl(0);
+          setInstantBookingNotification(null); // Clear notification when expired
+          clearNotification(latestInstantBooking.data.notification_id)
+          eventSource.close(); // Close SSE connection
+        } else {
+          setTtl(ttl);
+        }
+      };
+
+      eventSource.onerror = (err) => {
+        console.error("SSE Error:", err);
+        eventSource.close();
+      };
+
+       // Cleanup on component unmount
+       return () => {
+        eventSource.close();
+      };
     }
   }, [notifications]);
 
@@ -93,6 +126,7 @@ function getAllSublocalityNames(geocodeResults) {
           <div className="flex gap-2 w-full">
             {/* Instant Order Card with notification details */}
             <InstantOrderCard
+              timeRemaining={ttl}
               title={instantBookingNotification.data.recipe_title || ''}
               description={instantBookingNotification.body}
               recipeId={instantBookingNotification.data.recipe_id}
@@ -101,13 +135,13 @@ function getAllSublocalityNames(geocodeResults) {
               onAccept={() => console.log("Order Accepted")}
               onReject={() => handleReject(instantBookingNotification.data.notification_id)}
             />
-
+            
             {/* Map displaying customer location */}
             <div className="w-full border rounded-lg overflow-hidden">
-              {/* <MapsCard
+              <MapsCard
                 latitude={parseFloat(instantBookingNotification.data.latitude) || 12.9716}
                 longitude={parseFloat(instantBookingNotification.data.longitude) || 77.5946}
-              /> */}
+              />
             </div>
           </div>
         ) : (

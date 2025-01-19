@@ -32,6 +32,9 @@ import { useNotification } from "./context/NotificationsContext";
 import ManageChefRecipes from "./pages/Chef/ManageChefRecipes/ManageChefRecipes";
 import ManageChefOrders from "./pages/Chef/ManageChefOrders/ManageChefOrders";
 import ChefDashboard from "./pages/Chef/ChefDashboard/ChefDashboard";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 function App() {
   const navigate = useNavigate();
   const [userType, setUserType] = useState(null);
@@ -83,6 +86,7 @@ function App() {
   return (
     <>
       <div>
+      <ToastContainer />
         <Routes>
           {/* Main Layout */}
           <Route element={<MainLayout />}>

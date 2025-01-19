@@ -4,10 +4,10 @@ import { Card, Dropdown } from "flowbite-react";
 import recipe from '../../../src/assets/sandwich.jpg'
 
 
-const InstantOrderCard = ({ location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{} }) => {
+const InstantOrderCard = ({ timeRemaining, location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{} }) => {
   return (
     <>
-      <Card className="max-w-lg p-5">
+      <Card className="max-w-lg p-2">
         {/* <div className="flex justify-end">
         <Dropdown inline label="">
           <Dropdown.Item>
@@ -36,6 +36,8 @@ const InstantOrderCard = ({ location, imageUrl, title, onAccept = ()=>{}, onReje
           </Dropdown.Item>
         </Dropdown>
       </div> */}
+      
+        
         <div className="flex flex-col items-center">
           <img
             alt="Bonnie image"
@@ -81,6 +83,9 @@ const InstantOrderCard = ({ location, imageUrl, title, onAccept = ()=>{}, onReje
               Reject
             </div>
           </div>
+          <div className="text-sm mt-4 text-red-500">
+            Time Remaining: {timeRemaining}s
+         </div>
         </div>
       </Card>
     </>

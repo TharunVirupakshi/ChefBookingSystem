@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { messaging } from '../Firebase/firebase';
 import { getToken, onMessage } from 'firebase/messaging';
+import { toast } from "react-toastify";
 
 const CHEF_NOTIFICATIONS_KEY = "chef_notifications";
 
@@ -14,6 +15,7 @@ export const    useNotification = () => useContext(NotificationContext);
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
 
+
     // 1️⃣ Initialize Notifications in LocalStorage
     const initializeNotifications = () => {
         if (!localStorage.getItem(CHEF_NOTIFICATIONS_KEY)) {
@@ -23,30 +25,36 @@ export const NotificationProvider = ({ children }) => {
     };
 
     // 2️⃣ Save Notification (Avoiding Duplicates)
-    const saveNotification = (notification) => {
-        try {
-            const existingNotifications = JSON.parse(localStorage.getItem(CHEF_NOTIFICATIONS_KEY)) || [];
 
-            // Check for duplicates using `notification_id`
-            const isDuplicate = existingNotifications.some(
-                (notif) => notif.data?.notification_id === notification.data?.notification_id
-            );
+const INSTANT_BOOKING_KEY = "instant_booking_notification";
 
-            if (isDuplicate) {
-                console.warn("Duplicate notification detected. Skipping save.");
-                return;
-            }
+// Save notification with type handling
+const saveNotification = (notification) => {
+    try {
+        
+        const existingNotifications =
+            JSON.parse(localStorage.getItem(CHEF_NOTIFICATIONS_KEY)) || [];
+        const isDuplicate = existingNotifications.some(
+            (notif) => notif.data?.notification_id === notification.data?.notification_id
+        );
 
-            // Save notification
-            const updatedNotifications = [notification, ...existingNotifications];
-            localStorage.setItem(CHEF_NOTIFICATIONS_KEY, JSON.stringify(updatedNotifications));
-            setNotifications(updatedNotifications);
-
-            console.log("✅ Notification saved successfully.");
-        } catch (err) {
-            console.error("❌ Failed to save notification:", err);
+        if (isDuplicate) {
+            console.warn("Duplicate notification detected. Skipping save.");
+            return;
         }
-    };
+
+        existingNotifications.unshift(notification);
+        localStorage.setItem(
+            CHEF_NOTIFICATIONS_KEY,
+            JSON.stringify(existingNotifications)
+        );
+        console.log("✅ Saved new notification:", notification);
+        
+    } catch (err) {
+        console.error("❌ Failed to save notification:", err);
+    }
+};
+
 
     // 3️⃣ Get Notifications
     const getStoredNotifications = () => {
@@ -123,11 +131,16 @@ export const NotificationProvider = ({ children }) => {
 
             // Save notification (avoiding duplicates)
             saveNotification(formattedNotification);
-
-            setNotifications((prev) => [formattedNotification, ...prev])
+            
+            const notifs = getStoredNotifications()
+            setNotifications(notifs)
 
             // Optional: Immediate alert
-            alert(`[${formattedNotification.type}] ${formattedNotification.title}: ${formattedNotification.body}`);
+            // alert(`[${formattedNotification.type}] ${formattedNotification.title}: ${formattedNotification.body}`);
+            toast.info(
+            `[${formattedNotification.type}] ${formattedNotification.title}: ${formattedNotification.body}`,
+            { position: "top-right", autoClose: 5000 }
+        ); 
         });
     };
 
@@ -138,6 +151,7 @@ export const NotificationProvider = ({ children }) => {
                 if (event.data && event.data.type === 'NEW_BACKGROUND_NOTIFICATION') {
                     console.log('📥 Background Notification:', event.data.payload);
                     saveNotification(event.data.payload);
+                    setNotifications(getStoredNotifications())
                 }
             });
         }

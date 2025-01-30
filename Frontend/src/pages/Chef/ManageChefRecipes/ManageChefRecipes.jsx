@@ -4,16 +4,31 @@ import { useState } from "react";
 import { useEffect } from "react";
 import Toast from "../../../components/Toast/Toast";
 import { HiPencil, HiTrash } from "react-icons/hi";
-import AddUpdateRecipeModal from "./AddUpdateRecipeModal";
+import { useAuth } from "../../../context/AuthContext";
+import UpdateRecipeModal from "./UpdateRecipeModal";
+import AddRecipeModal from "./AddRecipeModal";
+
 
 const ManageChefRecipes = () => {
   const [recipes, setRecipes] = useState([]);
   const [toast, setToast] = useState({ type: "", message: "" });
-  const [modalMode, setModalMode] = useState("add");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRecipe, setSelectedRecipe] = useState(null);
   const [isToastVisible, setIsToastVisible] = useState(false);
   const [timeoutId, setTimeoutId] = useState(null);
+  const [chefid,setChefId] = useState('')
+  const {user,loading} = useAuth();
+
+  useEffect(() => {
+    if (!loading) {
+      console.log("User in AddUpdateComp....: ", user);
+      const chefuid = user?.uid
+      setChefId(chefuid)
+    }
+  }, [user, loading]);
+
+
+
 
   const showToast = (type, message) => {
     setToast({ type, message });
@@ -42,23 +57,30 @@ const ManageChefRecipes = () => {
   }, [timeoutId]);
 
   const fetchReciepes = async () => {
-    try {
-      const response = await fetch("http://localhost:3000/api/recipes", {
-        method: "GET",
-        headers: { "Content-Type": "application/json" },
-      });
+  if (!chefid) return; // Wait until chefid is set
+
+  try {
+    const response = await fetch(`http://localhost:3000/api/recipes/${chefid}`, {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
+
+    if (response.ok) {
       const data = await response.json();
       const sortedRecipes = data.sort((a, b) => a.recipe_id - b.recipe_id);
       setRecipes(sortedRecipes);
       console.log("Recipes:", data);
-    } catch (error) {
-      console.error("Error fetching recipes:", error.message);
+    } else {
+      console.error("Failed to fetch recipes:", response.statusText);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching recipes:", error.message);
+  }
+};
 
   useEffect(() => {
     fetchReciepes();
-  }, []);
+  }, [chefid]);
 
   const handleDeleteRecipe = async (recipe_id) => {
     try {
@@ -88,7 +110,6 @@ const ManageChefRecipes = () => {
   };
 
   const openEditModal = (recipeId, recipe) => {
-    setModalMode("edit");
     setSelectedRecipe({ ...recipe, recipe_id: recipeId }); // Pass recipe_id with recipe
     setIsModalOpen(true);
   };
@@ -127,7 +148,6 @@ const ManageChefRecipes = () => {
           <button
             type="button"
             onClick={() => {
-              setModalMode("add"); // Set the modal mode to "add"
               setSelectedRecipe(null); // Clear the selected recipe
               setIsModalOpen(true); // Open the modal
             }}
@@ -141,7 +161,6 @@ const ManageChefRecipes = () => {
           <Table.Head>
             <Table.HeadCell>Recipe Id</Table.HeadCell>
             <Table.HeadCell>Recipe name</Table.HeadCell>
-            <Table.HeadCell>Chef Id</Table.HeadCell>
             <Table.HeadCell>Description</Table.HeadCell>
             <Table.HeadCell>Ingredients</Table.HeadCell>
             <Table.HeadCell>Vegetarian</Table.HeadCell>
@@ -157,7 +176,6 @@ const ManageChefRecipes = () => {
               >
                 <TableCell>{recipe.recipe_id}</TableCell>
                 <TableCell>{recipe.title}</TableCell>
-                <TableCell>{recipe.chef_id}</TableCell>
                 <TableCell className="line-clamp-1">
                   {recipe.description}
                 </TableCell>
@@ -190,14 +208,22 @@ const ManageChefRecipes = () => {
           </Table.Body>
         </Table>
       </div>
-      <AddUpdateRecipeModal
-        isOpen={isModalOpen}
-        onClose={closeModal}
-        onAddRecipe={onAddRecipe}
-        onUpdateRecipe={onUpdateRecipe}
-        selectedRecipe={selectedRecipe}
-        mode={modalMode}
-      />
+      {selectedRecipe === null ? (
+  <AddRecipeModal
+    chefid={chefid}
+    isOpen={isModalOpen}
+    onClose={closeModal}
+    onAddRecipe={onAddRecipe}
+  />
+) : (
+  <UpdateRecipeModal
+    chefid={chefid}
+    isOpen={isModalOpen}
+    onClose={closeModal}
+    onUpdateRecipe={onUpdateRecipe}
+    selectedRecipe={selectedRecipe}
+  />
+)}
     </>
   );
 };

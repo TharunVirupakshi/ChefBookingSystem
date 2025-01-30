@@ -3,7 +3,6 @@ import * as Yup from "yup";
 
 // Validation schema for adding a recipe
 export const recipeCreateValidationSchema = Yup.object({
-  chef_id: Yup.number().integer().required("Chef ID is required."),
   title: Yup.string().required("Title is required."),
   description: Yup.string()
     .min(20, "Description must be at least 20 characters long.")
@@ -32,7 +31,6 @@ export const recipeCreateValidationSchema = Yup.object({
 
 // Validation schema for updating a recipe
 export const recipeUpdateValidationSchema = Yup.object({
-  chef_id: Yup.mixed().notRequired(), // chef_id cannot be updated, no need to validate
   title: Yup.string(),
   description: Yup.string()
     .min(20, "Description must be at least 20 characters long.")

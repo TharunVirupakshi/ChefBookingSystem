@@ -15,6 +15,53 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/:id" , async(req,res)=>{
+  const { id } = req.params;
+  try {
+    const result = await client.query(
+      "SELECT * FROM recipe WHERE chef_id = $1", 
+      [id] 
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No recipes found for this chef" });
+    }
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching recipes:", error.message);
+    res.status(500).json({ message: "Error fetching recipes" });
+  }
+})
+
+
+
+// Fetch all recipes or filter by chef_id and recipe_id
+router.get("/:chef_id/:recipe_id", async (req, res) => {
+  const { chef_id, recipe_id } = req.params; // Extract chef_id and recipe_id from route params
+
+  try {
+    // Query to fetch recipe based on both chef_id and recipe_id
+    const result = await client.query(
+      "SELECT * FROM recipe WHERE chef_id = $1 AND recipe_id = $2 AND deleted_at IS NULL", // Add the condition for deleted_at if needed
+      [chef_id, recipe_id] // Pass both parameters to the query
+    );
+
+    // If no recipe is found, return 404
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Recipe not found for this chef" });
+    }
+
+    // Return the recipe data
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching recipe:", error.message);
+    res.status(500).json({ message: "Error fetching recipe" });
+  }
+});
+
+
+
+
+
 const recipeCreateValidationSchema = Joi.object({
   chef_id: Joi.string().required(),
   title: Joi.string().required(),
@@ -41,7 +88,6 @@ const recipeCreateValidationSchema = Joi.object({
 
 // Schema for updating a recipe (PUT)
 const recipeUpdateValidationSchema = Joi.object({
-  chef_id: Joi.forbidden(), // chef_id cannot be updated
   title: Joi.string(),
   description: Joi.string().min(20).max(500),
   ingredients: Joi.string().min(20).max(500),
@@ -218,9 +264,9 @@ router.delete("/", async (req, res) => {
   try {
    // Update the 'deleted_at' column with the current timestamp for the given recipe_id
    const query = `
-      UPDATE recipes
+      UPDATE recipe
       SET deleted_at = NOW()
-      WHERE id = $1
+      WHERE recipe_id = $1
       RETURNING *;
     `;
     const result = await client.query(query, [recipeId]);

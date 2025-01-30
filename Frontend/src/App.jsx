@@ -27,48 +27,55 @@ import AdminDashboard from "./pages/Admin/AdminDashboard/AdminDashboard";
 import ManageRecipes from "./pages/Admin/ManageRecipes/ManageRecipes";
 import ManageCustomers from "./pages/Admin/ManageCustomers/ManageCustomers";
 import ManageOrders from "./pages/Admin/ManageOrders/ManageOrders";
-import { initFlowbite } from "flowbite"
+import { initFlowbite } from "flowbite";
 import { useNotification } from "./context/NotificationsContext";
 import ManageChefRecipes from "./pages/Chef/ManageChefRecipes/ManageChefRecipes";
 import ManageChefOrders from "./pages/Chef/ManageChefOrders/ManageChefOrders";
 import ChefDashboard from "./pages/Chef/ChefDashboard/ChefDashboard";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import UserOrder from "./pages/User/ManageUserOrders/UserOrder";
+import OrderPage from "./pages/User/ManageUserOrders/OrderPage";
+import InstantOrderStatus from "./pages/User/ManageUserOrders/InstantOrderStatus";
+
 
 function App() {
   const navigate = useNavigate();
   const [userType, setUserType] = useState(null);
+  const [userId,setUserId] = useState('')
 
   // const [isLoggedIn, setIsLoggedIn] = useState(false);
   // const [curUser, setCurUser] = useState(null);
 
   const { user, loading, getUserType } = useAuth();
-  const { requestPermission } = useNotification()
-
-  useEffect(()=>{
-    initFlowbite()
-  },[])
+  const { requestPermission } = useNotification();
 
   useEffect(() => {
-    if (!loading) {
-      console.log("User: ", user);
+    initFlowbite();
+  }, []);
 
-      // setCurUser(user);
-    }
-  }, [user, loading]);
+  useEffect(() => {
+  if (!loading && user) {
+    console.log("User: ", user);
+    const uid = user.uid;
+    setUserId(uid);
+    console.log('useruid', userId);
+  }
+}, [user, loading]);
 
+
+
+  
   const curUser = useMemo(() => user, [user]); // Memoize user data
   const isLoggedIn = useMemo(() => !!user, [user]); // Avoid re-computation
 
   useEffect(() => {
+    console.log("Requesting notif permission")
 
-    if(auth.currentUser?.uid){
-      requestPermission(auth.currentUser.uid);
-    }
-
-  }, []);
+      requestPermission(auth?.currentUser?.uid);
 
 
+  }, [auth]);
 
   useEffect(() => {
     const fetchUserType = async () => {
@@ -86,28 +93,33 @@ function App() {
   return (
     <>
       <div>
-      <ToastContainer />
+        <ToastContainer />
         <Routes>
           {/* Main Layout */}
-          <Route element={<MainLayout />}>
+          <Route element={<MainLayout userType={userType}/>}>
             <Route path="/" element={<HomePage />} />
+            <Route path="recipe/:id" element={<UserOrder/>}/>
+            <Route path="instant-order/:chef_id" element={<InstantOrderStatus/>}/> 
+            <Route path="order/:id" element={<OrderPage/>}/>
 
             <Route element={<ProtectedRoute />}>
               <Route
                 path="/dashboard"
                 element={<DashboardLayout userType={userType} />}
               >
-                <Route path="chef" element={<ChefDashboard/>}>
-                  <Route index element={<Navigate to="orders" replace />} /> 
-                  <Route path="orders" element={<ManageChefOrders/>}/>
-                  <Route path="recipe" element={<ManageChefRecipes/>}/>
+                <Route path="chef" element={<ChefDashboard />}>
+                  <Route index element={<Navigate to="orders" replace />} />
+                  <Route path="orders" element={<ManageChefOrders chef_id={userId}/>} />
+                  <Route path="recipe" element={<ManageChefRecipes />} />
                 </Route>
                 <Route path="admin" element={<AdminDashboard />}>
                   <Route index element={<Navigate to="recipe" replace />} />
                   <Route path="recipe" element={<ManageRecipes />} />
                   <Route path="customers" element={<ManageCustomers />} />
-                  <Route path="orders" element={<ManageOrders/>} />
+                  <Route path="orders" element={<ManageOrders />} />
                 </Route>
+               
+               
               </Route>
             </Route>
 
@@ -120,7 +132,7 @@ function App() {
                 ) : userType === "ADMIN" ? (
                   <Navigate to="/dashboard/admin" replace />
                 ) : userType === "USER" ? (
-                  <HomePage />
+                  <HomePage/>
                 ) : null
               }
             />

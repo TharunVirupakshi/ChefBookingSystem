@@ -4,12 +4,13 @@ import { Card, Dropdown } from "flowbite-react";
 import recipe from '../../../src/assets/sandwich.jpg'
 
 
-const InstantOrderCard = ({ timeRemaining, location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{} }) => {
+const InstantOrderCard = ({ timeRemaining, location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{}, onComplete = ()=>{}}) => {
   return (
     <>
       <Card className="max-w-lg p-2">
+     
         {/* <div className="flex justify-end">
-        <Dropdown inline label="">
+        <Dropdown inline label="">  
           <Dropdown.Item>
             <a
               href="#"
@@ -39,6 +40,7 @@ const InstantOrderCard = ({ timeRemaining, location, imageUrl, title, onAccept =
       
         
         <div className="flex flex-col items-center">
+       
           <img
             alt="Bonnie image"
             src={recipe}
@@ -70,22 +72,37 @@ const InstantOrderCard = ({ timeRemaining, location, imageUrl, title, onAccept =
           </span>
           </div>
           <div className="mt-4 flex space-x-3 lg:mt-6">
-            <div 
-              className="cursor-pointer inline-flex items-center rounded-lg bg-amber-300 px-4 py-2 text-center text-sm font-medium text-secondary hover:bg-yellow-300 focus:outline-none focus:ring-4 focus:ring-cyan-300 dark:bg-cyan-600 dark:hover:bg-cyan-700 dark:focus:ring-cyan-800"
-              onClick={onAccept}
-            >
-              Accept
-            </div>
-            <div
-              onClick={onReject}
-              className="cursor-pointer inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:border-gray-700 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
-            >
-              Reject
-            </div>
+          {onComplete ? (
+        // Show only "Complete" button when onComplete is present
+        <div 
+          className="cursor-pointer inline-flex items-center rounded-lg bg-green-500 px-4 py-2 text-center text-sm font-medium text-white hover:bg-green-600 focus:outline-none focus:ring-4 focus:ring-green-300"
+          onClick={onComplete}
+        >
+          Complete
+        </div>
+      ) : (
+        // Show "Accept" and "Reject" buttons when onComplete is NOT present
+        <>
+          <div 
+            className="cursor-pointer inline-flex items-center rounded-lg bg-amber-300 px-4 py-2 text-center text-sm font-medium text-secondary hover:bg-yellow-300 focus:outline-none focus:ring-4 focus:ring-cyan-300"
+            onClick={onAccept}
+          >
+            Accept
           </div>
+          <div
+            onClick={onReject}
+            className="cursor-pointer inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200"
+          >
+            Reject
+          </div>
+        </>
+      )}
+          </div>
+          {timeRemaining && (
           <div className="text-sm mt-4 text-red-500">
             Time Remaining: {timeRemaining}s
          </div>
+         )}
         </div>
       </Card>
     </>

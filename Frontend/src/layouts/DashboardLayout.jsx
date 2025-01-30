@@ -3,11 +3,14 @@ import { Outlet } from 'react-router-dom';
 import SideNavbar from '../components/SideNavbar/SideNavbar';
 import chefData from '../pages/Chef/ChefData.json'
 import adminData from '../pages/Admin/AdminData.json'
+
 import { useState } from 'react';
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 
 const DashboardLayout = ({userType}) => {
+  const navigate = useNavigate();
 const [sidebarLinks,setSidebarLinks] = useState([])
 
     /*
@@ -33,7 +36,7 @@ const handleSidebarLinks = () =>{
      setSidebarLinks(adminData);
       break;
     case "USER":
-     setSidebarLinks(userData);
+    navigate('/',{replace:true})  
       break;
     default:
       setSidebarLinks([]);

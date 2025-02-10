@@ -10,11 +10,11 @@ import { NotificationProvider } from './context/NotificationsContext'
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
         <NotificationProvider>
+        <AuthProvider>
         <App />
+        </AuthProvider>
         </NotificationProvider>
-      </AuthProvider>
     </BrowserRouter>
   </StrictMode>
 );

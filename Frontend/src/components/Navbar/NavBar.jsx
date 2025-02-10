@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 
-const NavBar = ({username, email, handleSignOut = ()=>{} ,isShowAvatar = true,handleDashboard = ()=>{}}) => {
+const NavBar = ({username, email, handleSignOut = ()=>{} ,isShowAvatar = true,handleDashboard = ()=>{},handleOrders = ()=>{}}) => {
 
   const [isAvatarVisible, setIsAvatarVisible] = useState(false);
   const { user, loading } = useAuth()
@@ -41,8 +41,9 @@ const NavBar = ({username, email, handleSignOut = ()=>{} ,isShowAvatar = true,ha
             <span className="block truncate text-sm font-medium">{email}</span>
           </Dropdown.Header>
           <Dropdown.Item onClick={handleDashboard}>Dashboard</Dropdown.Item>
-          <Dropdown.Item>Settings</Dropdown.Item>
-          <Dropdown.Item>Earnings</Dropdown.Item>
+          <Dropdown.Item onClick={handleOrders}>My Orders</Dropdown.Item>
+          {/* <Dropdown.Item>Settings</Dropdown.Item>
+          <Dropdown.Item>Earnings</Dropdown.Item> */}
           <Dropdown.Divider />
           <Dropdown.Item onClick={handleSignOut}>Sign out</Dropdown.Item>
         </Dropdown>

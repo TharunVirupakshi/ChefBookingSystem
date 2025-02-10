@@ -47,8 +47,8 @@ function App() {
   // const [isLoggedIn, setIsLoggedIn] = useState(false);
   // const [curUser, setCurUser] = useState(null);
 
-  const { user, loading, getUserType } = useAuth();
-  const { requestPermission } = useNotification();
+  const { user, loading, getUserType,logout } = useAuth();
+  const { requestPermission ,removePermission} = useNotification();
 
   useEffect(() => {
     initFlowbite();
@@ -60,8 +60,9 @@ function App() {
     const uid = user.uid;
     setUserId(uid);
     console.log('useruid', userId);
+    requestPermission(uid);
   }
-}, [user, loading]);
+}, [user, loading,requestPermission]);
 
 
 
@@ -69,13 +70,13 @@ function App() {
   const curUser = useMemo(() => user, [user]); // Memoize user data
   const isLoggedIn = useMemo(() => !!user, [user]); // Avoid re-computation
 
-  useEffect(() => {
-    console.log("Requesting notif permission")
+  // useEffect(() => {
+  //   console.log("Requesting notif permission")
 
-      requestPermission(auth?.currentUser?.uid);
+  //     requestPermission(auth.currentUser.uid);
 
 
-  }, [auth]);
+  // }, []);
 
   useEffect(() => {
     const fetchUserType = async () => {
@@ -90,17 +91,19 @@ function App() {
     fetchUserType();
   }, [user, getUserType]);
 
+ 
+
   return (
     <>
       <div>
         <ToastContainer />
         <Routes>
           {/* Main Layout */}
-          <Route element={<MainLayout userType={userType}/>}>
+          <Route element={<MainLayout userType={userType} removePermission={removePermission} userId={userId} />}>
             <Route path="/" element={<HomePage />} />
             <Route path="recipe/:id" element={<UserOrder/>}/>
-            <Route path="instant-order/:chef_id" element={<InstantOrderStatus/>}/> 
-            <Route path="order/:id" element={<OrderPage/>}/>
+            <Route path="instant-order" element={<InstantOrderStatus customer_id={userId}/>}/> 
+            <Route path="orders/:chef_id" element={<OrderPage customer_id={userId}/>}/>
 
             <Route element={<ProtectedRoute />}>
               <Route

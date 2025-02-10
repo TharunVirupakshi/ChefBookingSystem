@@ -3,6 +3,7 @@ import React, { createContext, useState, useContext, useEffect } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../Firebase/firebase";
 import { useNavigate } from "react-router-dom";
+import { useNotification } from "./NotificationsContext";
 
 
 
@@ -14,6 +15,7 @@ export const AuthProvider = ({ children }) => {
  
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const { removePermission } = useNotification();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -41,6 +43,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    if (user) {
+      removePermission(user.uid);// Call removePermission to remove the token and permission
+    }
     await auth.signOut();
     setUser(null);
     navigate("/login");

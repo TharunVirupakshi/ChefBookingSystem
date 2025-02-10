@@ -124,8 +124,49 @@ router.get("/:chef_id", async (req, res) => {
 });
 
 
+router.get("/completed-orders/:chef_id", async (req, res) => {
+  const { chef_id } = req.params; // Extract chef_id from URL params
+
+  if (!chef_id) {
+    return res.status(400).json({ message: "chef_id is required" });
+  }
+
+  try {
+    const result = await client.query(
+      "SELECT * FROM orders WHERE chef_id = $1 AND status IN ('COMPLETED', 'CANCELLED') AND deleted_at IS NULL",
+      [chef_id]
+    );
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching completed orders:", error);
+    res.status(500).json({ message: "Error fetching completed orders" });
+  }
+});
 
 
+router.get("/customer-orders/:customer_id", async (req, res) => {
+  const { customer_id } = req.params; // Extract customer_id from URL params
+
+  if (!customer_id) {
+    return res.status(400).json({ message: "customer_id is required" });
+  }
+
+  try {
+    const result = await client.query(
+      "SELECT * FROM orders WHERE customer_id = $1 AND deleted_at IS NULL", // Removed status condition
+      [customer_id]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No orders found for this customer" });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    res.status(500).json({ message: "Error fetching orders" });
+  }
+});
 
 
 //   router.get("/:chef_id/:order_id", async (req, res) => {
@@ -335,22 +376,37 @@ router.put("/update-instant-book", async (req, res) => {
   const { orderId, chef_id } = req.body; // Assuming you're sending the orderId and chef_id in the request body
 
   try {
-    // Update the instant_book status to "COMPLETED"
-    const result = await client.query(
+    // Update the instant_book status to "COMPLETED" in chef_status
+    const chefStatusResult = await client.query(
       `UPDATE chef_status
          SET instant_book = $1, updated_at = NOW()
          WHERE chef_id = $2 AND order_id = $3`,
       ["COMPLETED", chef_id, orderId]
     );
 
-    if (result.rowCount > 0) {
-      res.status(200).json({ message: "Instant book status updated to COMPLETED" });
-    } else {
-      res.status(404).json({ message: "Record not found for the given chef_id and order_id" });
+    if (chefStatusResult.rowCount === 0) {
+      console.error(`No matching record in chef_status for chef_id: ${chef_id} and order_id: ${orderId}`);
+      return res.status(404).json({ message: "Record not found for the given chef_id and order_id in chef_status" });
     }
+
+    // Update the status and end_date_time to "COMPLETED" in orders table
+    const orderResult = await client.query(
+      `UPDATE orders
+         SET status = $1, end_date_time = NOW()
+         WHERE order_id = $2`,
+      ["COMPLETED", orderId]
+    );
+
+    if (orderResult.rowCount === 0) {
+      console.error(`No matching record in orders for order_id: ${orderId}`);
+      return res.status(404).json({ message: "Record not found for the given order_id in orders" });
+    }
+
+    // If both queries are successful, send a success response
+    res.status(200).json({ message: "Order status updated to COMPLETED" });
   } catch (error) {
-    console.error("Error updating instant book status:", error);
-    res.status(500).json({ message: "Error updating instant book status" });
+    console.error("Error updating instant book status:", error); // More detailed error log
+    res.status(500).json({ message: "Error updating instant book status", error: error.message });
   }
 });
 
@@ -501,7 +557,7 @@ router.get("/sse/instant-booking/:chef_id", async (req, res) => {
             ttl: ttl > 30 ? ttl - 30 : 0,
             trueTtl: ttl,
             expired: ttl <= 30,
-            status: parsedData.status,
+            status: parsedData?.status,
           })}\n\n`
         );
       } else {
@@ -542,6 +598,8 @@ const responseSchema = Joi.object({
   customer_id: Joi.string().required(),
   recipe_id: Joi.number().integer().required(),
   response: Joi.string().valid("ACCEPT", "REJECT").required(),
+  chef_latitude: Joi.number().required(),  // Added latitude validation
+  chef_longitude: Joi.number().required(), // Added longitude validation
 });
 
 // router.post('/instant/respond', async (req, res) => {
@@ -618,7 +676,7 @@ router.post("/instant/response", async (req, res) => {
       .json({ success: false, message: error.details[0].message });
   }
 
-  const { chef_id, customer_id, recipe_id, response } = value;
+  const { chef_id, customer_id, recipe_id, response, chef_latitude, chef_longitude } = value;
   const activeRequestKey = `instant_booking:${chef_id}`;
 
   try {
@@ -672,10 +730,10 @@ router.post("/instant/response", async (req, res) => {
         //     [customer_id, chef_id, recipe_id, 1000, "PENDING"]
         //   );
         const orderResult = await client.query(
-          `INSERT INTO orders (customer_id, chef_id, recipe_id, total_price, status, type, start_date_time, end_date_time, latitude, longitude)
-         VALUES ($1, $2, $3, $4, $5, 'INSTANT', NOW(), NOW(), $6, $7)
+          `INSERT INTO orders (customer_id, chef_id, recipe_id, total_price, status, type, start_date_time, end_date_time, latitude, longitude, chef_latitude, chef_longitude)
+         VALUES ($1, $2, $3, $4, $5, 'INSTANT', NOW(), NOW(), $6, $7, $8, $9)
          RETURNING order_id`,
-          [customer_id, chef_id, recipe_id, 1000, "PENDING", reqDataJson.latitude, reqDataJson.longitude]
+          [customer_id, chef_id, recipe_id, 1000, "PENDING", reqDataJson.latitude, reqDataJson.longitude, chef_latitude, chef_longitude]
         );
 
         // Ensure result contains the order_id
@@ -737,6 +795,8 @@ router.post("/instant/response", async (req, res) => {
         recipe_id: String(recipe_id),
         recipe_title: String(requestData.recipe_title || ""),
         type: "INSTANT_BOOKING_ACCEPTED",
+        chef_latitude: chef_latitude,  
+        chef_longitude: chef_longitude 
       };
 
       const fcmToken = await redisService.getFCMToken(customer_id);
@@ -772,10 +832,34 @@ router.post("/instant/response", async (req, res) => {
       );
 
       // Update `chef_status` to `AVAILABLE`
-      await client.query(
-        "UPDATE chef_status SET instant_book = $1, updated_at = NOW() WHERE chef_id = $2",
-        ["AVAILABLE", chef_id]
-      );
+      // await client.query(
+      //   "UPDATE chef_status SET instant_book = $1, updated_at = NOW() WHERE chef_id = $2",
+      //   ["AVAILABLE", chef_id]
+      // );
+
+      await client.query("BEGIN"); 
+      try {
+        // Insert CANCELLED order entry first
+        const orderResult = await client.query(
+          `INSERT INTO orders (customer_id, chef_id, recipe_id, total_price, status, type, start_date_time, end_date_time, latitude, longitude, chef_latitude, chef_longitude)
+           VALUES ($1, $2, $3, $4, $5, 'INSTANT', NOW(), NOW(), $6, $7, $8, $9)
+           RETURNING order_id`,
+          [customer_id, chef_id, recipe_id, 1000, "CANCELLED", requestData.latitude, requestData.longitude, chef_latitude, chef_longitude]
+        );
+        const orderId = orderResult.rows[0].order_id;
+
+        // Update `chef_status` after inserting order
+        await client.query(
+          "UPDATE chef_status SET instant_book = $1, order_id = $2, updated_at = NOW() WHERE chef_id = $3",
+          ["CANCELLED", orderId, chef_id]
+        );
+
+        await client.query("COMMIT");
+      } catch (err) {
+        await client.query("ROLLBACK");
+        throw err;
+      }
+
 
       // Send notification to the customer
       const userNotificationData = {
@@ -784,6 +868,8 @@ router.post("/instant/response", async (req, res) => {
         recipe_id: String(recipe_id),
         recipe_title: String(requestData.recipe_title || ""),
         type: "INSTANT_BOOKING_REJECTED",
+        chef_latitude: chef_latitude,  
+        chef_longitude: chef_longitude 
       };
 
       const fcmToken = await redisService.getFCMToken(customer_id);

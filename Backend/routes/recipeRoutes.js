@@ -32,6 +32,23 @@ router.get("/:id" , async(req,res)=>{
   }
 })
 
+//Fetch recipe by recipe_id
+router.get("/recipe/:recipe_id", async (req, res) => {
+  const { recipe_id } = req.params;
+
+  try {
+    const result = await client.query("SELECT * FROM recipe WHERE recipe_id = $1", [recipe_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    res.status(200).json(result.rows[0]);
+  } catch (error) {
+    console.error("Error fetching recipe:", error.message);
+    res.status(500).json({ message: "Error fetching recipe" });
+  }
+});
 
 
 // Fetch all recipes or filter by chef_id and recipe_id

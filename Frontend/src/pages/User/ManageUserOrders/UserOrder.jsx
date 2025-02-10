@@ -7,6 +7,7 @@ import ChefRating from "../../../components/Rating/ChefRating/ChefRating";
 import { auth } from "../../../Firebase/firebase";
 import { useAuth } from "../../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
+import APIService from "../../../API/APIService";
 
 const UserOrder = () => {
   const { user, loading } = useAuth();
@@ -122,7 +123,6 @@ const UserOrder = () => {
   }, [chef_id, recipe_id]);
 
 
-
   const handleOrderNow = async() => {
   //   if (!chef_id || !recipe_id || !userGeolocation.lat || !userGeolocation.long) {
   //   toast.error("Missing required data. Please try again.");
@@ -137,20 +137,29 @@ const UserOrder = () => {
   }
 
   try {
-    const response = await fetch("http://localhost:3000/api/orders/instant",{
-      method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-    });
-    const result = await response.json();
-    if (response.ok) {
-        toast.success(result.message || "Booking request sent successfully!");
-        console.log("Request ID:", result.req_id);
-        navigate(`/instant-order/${requestData.chef_id}`); 
+    // const response = await fetch("http://localhost:3000/api/orders/instant",{
+    //   method: "POST",
+    //     headers: {
+    //       "Content-Type": "application/json",
+    //     },
+    //     body: JSON.stringify(requestData),
+    // });
+    // const result = await response.json();
+    const response = await APIService.instantBooking(
+      requestData.chef_id,
+      requestData.customer_id,
+      requestData.recipe_id,
+      requestData.latitude,
+      requestData.longitude
+    );
+
+    if (response.success) {
+      toast.success(response.message || "Booking request sent successfully!");
+        console.log("Request ID:", response.req_id);
+        console.log("Navigating with chef_id:", requestData.chef_id);
+        navigate('/instant-order', { state: { chef_id: requestData.chef_id } });
       } else {
-        toast.error(result.message || "Failed to place order.");
+        toast.error(response.message || "Failed to place order.");
       }
     } catch (error) {
       console.error("Error placing order:", error);

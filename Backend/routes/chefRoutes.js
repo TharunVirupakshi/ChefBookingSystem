@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const client = require('../config/db');
-const { saveFCMToken } = require('../services/redisService');
+const { saveFCMToken, getChefStatus } = require('../services/redisService');
 const {admin} = require('../config/firebase');
 const Joi = require('joi');
 const { updateChefStatus } = require('../services/redisService')
@@ -47,6 +47,26 @@ router.post('/update-fcm-token', async(req, res)=>{
         console.error('[ERROR] Failed to save FCM token:', error);
         res.status(500).json({ success: false, message: 'Failed to save FCM token' });
     }
+})
+
+router.get('/status/:chef_id', async(req, res)=>{
+        const { chef_id } = req.params
+
+        if(!chef_id){
+            return res.status(400).json({ success: false, message: 'chef_id is required' }); 
+        }
+
+        try {
+            const status = await getChefStatus(chef_id);
+            // console.log(status)
+            return res.status(200).json({success: true, status});
+        } catch (error) {
+            console.log("Error fetching Chef Status");
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to get chef status'
+            }); 
+        }
 })
 
 router.put('/status', async(req, res) => {

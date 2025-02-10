@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { messaging } from '../Firebase/firebase';
-import { getToken, onMessage } from 'firebase/messaging';
+import { deleteToken, getToken, onMessage } from 'firebase/messaging';
 import { toast } from "react-toastify";
 
 const CHEF_NOTIFICATIONS_KEY = "chef_notifications";
@@ -14,6 +14,7 @@ export const    useNotification = () => useContext(NotificationContext);
 // Notification Provider Component
 export const NotificationProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
+    
 
 
     // 1️⃣ Initialize Notifications in LocalStorage
@@ -109,6 +110,35 @@ const saveNotification = (notification) => {
         }
     };
 
+
+    const removePermission = async (chefId) => {
+        try {
+          // Retrieve the FCM token from Firebase Cloud Messaging
+          const fcmToken = await getToken(messaging);
+      
+          if (!fcmToken) {
+            throw new Error("No FCM token available to remove.");
+          }
+      
+          // Remove token from Firebase Cloud Messaging
+          await deleteToken(messaging);
+      
+          // Optionally, update your backend to remove the token association from the database
+          await fetch('http://localhost:3000/api/chefs/remove-fcm-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chef_id: chefId, fcm_token: fcmToken })
+          });
+      
+          console.log("FCM token removed from Firebase and backend.");
+        } catch (error) {
+          console.error("Error removing FCM token:", error);
+        }
+      };
+
+
+
+
     // 6️⃣ Listen for Foreground Messages
     const listenForMessages = () => {
         onMessage(messaging, (payload) => {
@@ -165,7 +195,7 @@ const saveNotification = (notification) => {
     }, []);
 
     return (
-        <NotificationContext.Provider value={{ notifications, saveNotification, clearNotification, requestPermission }}>
+        <NotificationContext.Provider value={{ notifications, saveNotification, clearNotification, requestPermission,removePermission }}>
             {children}
         </NotificationContext.Provider>
     );

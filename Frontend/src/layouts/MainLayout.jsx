@@ -5,7 +5,7 @@ import NavBar from '../components/Navbar/NavBar'
 import { useAuth } from '../context/AuthContext'
 import { auth } from '../Firebase/firebase'
 
-const MainLayout = ({userType}) => {
+const MainLayout = ({userType ,removePermission, userId}) => {
 
   const {user, loading} = useAuth()  
   const navigate = useNavigate();
@@ -20,8 +20,22 @@ const MainLayout = ({userType}) => {
    else  navigate('/dashboard/user');
   }
 
+const handleOrders = ()=>{
+  if(userType === 'CHEF'){
+    navigate('/dashboard/chef/orders')
+  }
+  else if(userType === 'ADMIN'){
+    navigate('/dashboard/admin/orders')
+  }
+  else navigate('instant-order')
+}
+
+
   const handleSignOut = () => {
     signOut(auth);
+    if (userId) {
+      removePermission(userId)
+    }
     navigate('/login', {replace: true});
  }
 
@@ -29,7 +43,7 @@ const MainLayout = ({userType}) => {
   
   return (
     <>
-    <NavBar username={user?.displayName} email={user?.email} handleSignOut={handleSignOut} handleDashboard={handleDashboard}/>
+    <NavBar username={user?.displayName} email={user?.email} handleSignOut={handleSignOut} handleDashboard={handleDashboard} handleOrders={handleOrders}/>
     <main className=''>
       <Outlet />
     </main>

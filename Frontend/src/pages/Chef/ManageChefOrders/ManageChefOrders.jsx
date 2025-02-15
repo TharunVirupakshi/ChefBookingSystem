@@ -9,10 +9,12 @@ import { initFlowbite } from "flowbite";
 
 const ManageChefOrders = ({ chef_id }) => {
   const [status, setStatus] = useState("");
+  const [orderstatus,setOrderstatus] = useState("");
   const [completedOrders, setCompletedOrders] = useState([]);
   const [completedRecipes, setCompletedRecipes] = useState([]);
   const [instantBookingNotification, setInstantBookingNotification] =
     useState(null);
+    const [latestCancelNotification,setLatestCancelNotification] = useState(null);
   const [locationName, setLocationName] = useState("Loading location...");
   const [orderLocationName, setOrderLocationName] = useState("");
   const { notifications, clearNotification } = useNotification();
@@ -109,7 +111,7 @@ const ManageChefOrders = ({ chef_id }) => {
     } else {
       alert("Geolocation is not supported by this browser!");
     }
-  }, [chef_id]);
+  }, []);
 
   const fetchStatus = async () => {
     try {
@@ -163,6 +165,10 @@ const ManageChefOrders = ({ chef_id }) => {
         (data) => {
           // ✅ No need for JSON.parse, `data` is already an object
           const { ttl, expired, trueTtl, status } = data;
+          if (status) {
+            console.log("Updating order status:", status);
+            setOrderstatus(status); // ✅ Ensure status is updated early
+          }
 
           console.log("SSE Status:", status, "Remaining True TTL:", trueTtl);
 
@@ -179,6 +185,9 @@ const ManageChefOrders = ({ chef_id }) => {
           } else {
             // Once trueTtl is 0, stop logging and clear notification
             console.log("True TTL reached 0. Closing SSE.");
+            // setOrderstatus(status)
+            setInstantBookingNotification(null); // Clear notification
+            clearNotification(latestInstantBooking.data.notification_id);
             eventSource.close(); // Close the SSE stream
           }
         },
@@ -197,6 +206,7 @@ const ManageChefOrders = ({ chef_id }) => {
       };
     }
   }, [notifications]);
+
 
   // const handleReject = (notif_id) => {
 
@@ -256,31 +266,29 @@ const ManageChefOrders = ({ chef_id }) => {
       toast.error("Missing required data to accept the order.");
       return;
     }
-  
+
     const { customer_id, recipe_id } = instantBookingNotification.data;
-  
+
     console.log("Sending Accept Request with:");
     console.log("Chef ID:", chef_id);
     console.log("Customer ID:", customer_id);
     console.log("Recipe ID:", recipe_id);
     console.log("Chef Location:", chefGeolocation);
-  
+
     if (!chefGeolocation || !chefGeolocation.lat || !chefGeolocation.long) {
       toast.error("Geolocation is missing or invalid.");
       return;
     }
-  
-    try {
 
+    try {
       console.log("Sending API Request:", {
         chef_id: chef_id,
         customer_id,
         recipe_id,
         response: "ACCEPT",
         latitude: chefGeolocation.lat,
-        longitude: chefGeolocation.long
+        longitude: chefGeolocation.long,
       });
-  
 
       const result = await APIService.sendInstantResponse(
         chef_id,
@@ -288,11 +296,11 @@ const ManageChefOrders = ({ chef_id }) => {
         recipe_id,
         "ACCEPT",
         chefGeolocation.lat,
-        chefGeolocation.long,
+        chefGeolocation.long
       );
-  
+
       console.log("Accept response: ", result);
-  
+
       if (result.success) {
         console.log("Order ID:", result.orderId);
         setOrderId(result?.orderId);
@@ -311,45 +319,39 @@ const ManageChefOrders = ({ chef_id }) => {
       fetchOrder(id);
     }
   };
-  
 
   const handleReject = async () => {
     if (!instantBookingNotification || !chef_id) {
       toast.error("Missing required data to reject the order.");
       return;
     }
-    console.log("instantordernotification...", instantBookingNotification.data);
 
-    const { customer_id, recipe_id } = instantBookingNotification.data;
+    console.log("instantOrderNotification...", instantBookingNotification.data);
+
+    const { customer_id, recipe_id, notification_id } =
+      instantBookingNotification.data;
+
+    if (!chefGeolocation) {
+      toast.error("Chef location data is missing.");
+      return;
+    }
 
     try {
-      // const response = await fetch("http://localhost:3000/api/orders/instant/response", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({
-      //     chef_id: chef_id,
-      //     customer_id,
-      //     recipe_id,
-      //     response: "REJECT", // Reject the order
-      //   }),
-      // });
-
-      // const result = await response.json();
       const result = await APIService.sendInstantResponse(
         chef_id,
         customer_id,
         recipe_id,
         "REJECT",
         chefGeolocation.lat,
-        chefGeolocation.long,
+        chefGeolocation.long
       );
+
       console.log("Reject response:", result);
+
       if (result.success) {
         toast.success("Order rejected successfully.");
-        setInstantBookingNotification(null);
-        clearNotification(instantBookingNotification.data.notification_id);
+        setInstantBookingNotification(null); // Remove active order
+        clearNotification(notification_id); // Clear notification
         setAccepted(false);
       } else {
         toast.error(result.message || "Failed to reject the order.");
@@ -380,7 +382,7 @@ const ManageChefOrders = ({ chef_id }) => {
       );
 
       if (result) {
-        console.log("✅ Recipe Data Fetched:", result);
+        // console.log("✅ Recipe Data Fetched:", result);
         setRecipeData(result);
       } else {
         console.error("❌ Error fetching recipe:", result.message);
@@ -436,17 +438,43 @@ const ManageChefOrders = ({ chef_id }) => {
     fetchOrder(id);
   }, []);
 
+  // const handleComplete = async () => {
+  //   const orderId = orderData?.order_id;
+  //   try {
+  //     // const response = await fetch("http://localhost:3000/api/orders/update-instant-book", {
+  //     //   method: "PUT",
+  //     //   headers: { "Content-Type": "application/json" },
+  //     //   body: JSON.stringify({ orderId, chef_id }),
+  //     // });
+
+  //     // const result = await response.json();
+  //     const result = await APIService.updateInstantBookStatus(orderId, chef_id);
+  //     console.log("Complete response:", result);
+
+  //     if (result.message === "Order status updated to COMPLETED") {
+  //       toast.success("Order marked as completed.");
+  //       setAccepted(false);
+  //       // handleCloseCard();
+  //     } else {
+  //       toast.error(result.message || "Failed to complete the order.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error completing the order:", error); // Log the full error message
+  //     toast.error("Error completing the order.");
+  //   } finally {
+  //     const id = auth.currentUser.uid;
+  //     fetchOrder(id);
+  //   }
+  // };
+
   const handleComplete = async () => {
     const orderId = orderData?.order_id;
     try {
-      // const response = await fetch("http://localhost:3000/api/orders/update-instant-book", {
-      //   method: "PUT",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ orderId, chef_id }),
-      // });
-
-      // const result = await response.json();
-      const result = await APIService.updateInstantBookStatus(orderId, chef_id);
+      const result = await APIService.updateInstantBookStatus(
+        orderId,
+        chef_id,
+        "COMPLETED"
+      );
       console.log("Complete response:", result);
 
       if (result.message === "Order status updated to COMPLETED") {
@@ -457,8 +485,34 @@ const ManageChefOrders = ({ chef_id }) => {
         toast.error(result.message || "Failed to complete the order.");
       }
     } catch (error) {
-      console.error("Error completing the order:", error); // Log the full error message
+      console.error("Error completing the order:", error);
       toast.error("Error completing the order.");
+    } finally {
+      const id = auth.currentUser.uid;
+      fetchOrder(id);
+    }
+  };
+
+  const handleCancel = async () => {
+    const orderId = orderData?.order_id;
+    try {
+      const result = await APIService.updateInstantBookStatus(
+        orderId,
+        chef_id,
+        "CANCELLED"
+      );
+      console.log("Cancel response:", result);
+
+      if (result.message === "Order status updated to CANCELLED") {
+        toast.success("Order has been cancelled.");
+        setAccepted(false);
+        // handleCloseCard();
+      } else {
+        toast.error(result.message || "Failed to cancel the order.");
+      }
+    } catch (error) {
+      console.error("Error cancelling the order:", error);
+      toast.error("Error cancelling the order.");
     } finally {
       const id = auth.currentUser.uid;
       fetchOrder(id);
@@ -480,10 +534,21 @@ const ManageChefOrders = ({ chef_id }) => {
         );
 
         const recipes = await Promise.all(recipePromises);
-        console.log("Fetched Recipes:", recipes); // Debugging log
+        // console.log("Fetched Recipes:", recipes); // Debugging log
         setCompletedRecipes(recipes);
+
+        //Fetch customer details using customer_id
+      //   const uniqueCustomerIds = [...new Set(orders.map((order) => order.customer_id))];
+        
+      //    // Fetch customer details in parallel
+      // const customerPromises = uniqueCustomerIds.map((id) => APIService.getCustomerById(id));
+      // const customers = await Promise.all(customerPromises);
+
+      //  // Store customer data
+      //  setCustomerData(customers);
+
       } catch (error) {
-        console.error("Error fetching completed orders and recipes:", error);
+        console.error("Error fetching completed orders, recipes and customers :", error);
       }
     };
 
@@ -491,8 +556,14 @@ const ManageChefOrders = ({ chef_id }) => {
       fetchCompletedOrdersAndRecipes();
     }
   }, [chef_id]);
-  console.log("completed orders..", completedOrders);
-  console.log("completed recipes..", completedRecipes);
+
+
+
+ 
+
+  console.log('order status',orderstatus)
+  // console.log("completed orders..", completedOrders);
+  // console.log("completed recipes..", completedRecipes);
 
   return (
     <div className="bg-slate-100 p-10 rounded-md shadow-md min-h-screen">
@@ -531,6 +602,8 @@ const ManageChefOrders = ({ chef_id }) => {
                 handleReject(instantBookingNotification.data.notification_id)
               }
               active={true}
+              UserStatus={orderstatus}
+              
               // onComplete={handleComplete}
               // accepted={accepted}
               // onClose={handleCloseCard}
@@ -554,7 +627,9 @@ const ManageChefOrders = ({ chef_id }) => {
               customerId={orderData.customer_id}
               location={orderLocationName}
               onComplete={handleComplete}
+              onCancel={handleCancel}
               active={false}
+              UserStatus={orderstatus}
             />
             <div className="w-full border rounded-lg overflow-hidden">
               {/* <MapsCard
@@ -581,6 +656,19 @@ const ManageChefOrders = ({ chef_id }) => {
 export default ManageChefOrders;
 
 const Table = ({ completedOrders = [], completedRecipes = [] }) => {
+  const [customerData,setCustomerData] = useState([]);
+
+
+  const handleView =  async (customerId) => {
+    if (!customerId) return;
+    const result = await APIService.getCustomerById(customerId);
+    if (result) {
+      setCustomerData(result)
+    }
+  }
+
+console.log('customerdata',customerData)
+
   return (
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg p-2">
       <div class="flex items-center justify-between flex-column md:flex-row flex-wrap space-y-4 md:space-y-0 py-4 bg-white dark:bg-gray-900">
@@ -728,7 +816,7 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
             );
 
             // Log the recipe for debugging
-            console.log("Recipe:", recipe);
+            {/* console.log("Recipe:", recipe); */}
             return (
               <tr
                 key={index}
@@ -777,7 +865,13 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
                 <td class="px-6 py-4">{order.type}</td>
                 <td class="px-6 py-4">
                   <div class="flex items-center">
-                    <div class={`${order.status === "COMPLETED" ?  "bg-green-500" : "bg-red-500"} h-2.5 w-2.5 rounded-full me-2`}></div>{" "}
+                    <div
+                      class={`${
+                        order.status === "COMPLETED"
+                          ? "bg-green-500"
+                          : "bg-red-500"
+                      } h-2.5 w-2.5 rounded-full me-2`}
+                    ></div>{" "}
                     {order.status}
                     {/* <div class="h-2.5 w-2.5 rounded-full bg-yellow-300 me-2"></div> Pending */}
                     {/* <div class="h-2.5 w-2.5 rounded-full bg-red-500 me-2"></div> Cancelled */}
@@ -785,11 +879,12 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
                 </td>
                 <td class="px-6 py-4">
                   <a
-                    href="#"
+                  href="#"
                     type="button"
                     data-modal-target="editUserModal"
                     data-modal-show="editUserModal"
                     class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                    onClick={()=>handleView(order.customer_id)}
                   >
                     View
                   </a>
@@ -810,7 +905,7 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
           <form class="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
             <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
               <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
-                Edit user
+                Detailed Info
               </h3>
               <button
                 type="button"
@@ -840,36 +935,23 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
               <div class="grid grid-cols-6 gap-6">
                 <div class="col-span-6 sm:col-span-3">
                   <label
-                    for="first-name"
+                    for="customer-fullname"
                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                   >
-                    First Name
+                    Customer FullName
                   </label>
                   <input
                     type="text"
                     name="first-name"
                     id="first-name"
+                    value={customerData.full_name || ""}
                     class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                     placeholder="Bonnie"
-                    required=""
+                    readOnly
                   />
                 </div>
-                <div class="col-span-6 sm:col-span-3">
-                  <label
-                    for="last-name"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    name="last-name"
-                    id="last-name"
-                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="Green"
-                    required=""
-                  />
-                </div>
+               
+               
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
@@ -878,14 +960,16 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
                     Email
                   </label>
                   <input
+                  value={customerData.email || ""}
                     type="email"
                     name="email"
                     id="email"
                     class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                     placeholder="example@company.com"
-                    required=""
+                    readOnly
                   />
                 </div>
+
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="phone-number"
@@ -894,78 +978,32 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
                     Phone Number
                   </label>
                   <input
-                    type="number"
+                   value={customerData.phone_number || "N/A"}
+                    type="text"
                     name="phone-number"
                     id="phone-number"
                     class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="e.g. +(12)3456 789"
-                    required=""
+                   readOnly
                   />
                 </div>
                 <div class="col-span-6 sm:col-span-3">
                   <label
-                    for="department"
+                    for="address"
                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                   >
-                    Department
+                   Address
                   </label>
                   <input
+                   value={customerData.address || "N/A"}
                     type="text"
-                    name="department"
-                    id="department"
+                    name="address"
+                    id="address"
                     class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="Development"
-                    required=""
+                    placeholder="address"
+                    readOnly
                   />
                 </div>
-                <div class="col-span-6 sm:col-span-3">
-                  <label
-                    for="company"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    Company
-                  </label>
-                  <input
-                    type="number"
-                    name="company"
-                    id="company"
-                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="123456"
-                    required=""
-                  />
-                </div>
-                <div class="col-span-6 sm:col-span-3">
-                  <label
-                    for="current-password"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    Current Password
-                  </label>
-                  <input
-                    type="password"
-                    name="current-password"
-                    id="current-password"
-                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="••••••••"
-                    required=""
-                  />
-                </div>
-                <div class="col-span-6 sm:col-span-3">
-                  <label
-                    for="new-password"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                  >
-                    New Password
-                  </label>
-                  <input
-                    type="password"
-                    name="new-password"
-                    id="new-password"
-                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="••••••••"
-                    required=""
-                  />
-                </div>
+                
               </div>
             </div>
 

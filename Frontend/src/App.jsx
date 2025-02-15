@@ -103,7 +103,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="recipe/:id" element={<UserOrder/>}/>
             <Route path="instant-order" element={<InstantOrderStatus customer_id={userId}/>}/> 
-            <Route path="orders/:chef_id" element={<OrderPage customer_id={userId}/>}/>
+            <Route path="myorders" element={<OrderPage customer_id={userId}/>}/>
 
             <Route element={<ProtectedRoute />}>
               <Route

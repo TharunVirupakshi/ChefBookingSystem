@@ -4,11 +4,16 @@ import { Card, Dropdown } from "flowbite-react";
 import recipe from '../../../src/assets/sandwich.jpg'
 
 
-const InstantOrderCard = ({ active,timeRemaining, location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{}, onComplete=()=>{},...props}) => {
+const InstantOrderCard = ({ active,timeRemaining, location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{}, onComplete=()=>{}, onCancel=()=>{},UserStatus}) => {
  console.log('active',active)
+ const isCancelled = UserStatus === "CANCELLED";
+
   return (
     <>
       <Card className="max-w-lg p-2">
+      <span className={`${isCancelled ? "text-red-500" : "text-green-500"}`}>
+      {isCancelled && "User Cancelled"}
+        </span>
         <div className="flex flex-col items-center">
        
           <img
@@ -46,17 +51,21 @@ const InstantOrderCard = ({ active,timeRemaining, location, imageUrl, title, onA
             <>
               {/* Show Accept and Reject buttons when active is true */}
               <div 
-                className="cursor-pointer inline-flex items-center rounded-lg bg-amber-300 px-4 py-2 text-center text-sm font-medium text-secondary hover:bg-yellow-300 focus:outline-none focus:ring-4 focus:ring-cyan-300"
-                onClick={onAccept}
-              >
-                Accept
-              </div>
-              <div
-                onClick={onReject}
-                className="cursor-pointer inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200"
-              >
-                Reject
-              </div>
+                  className={`cursor-pointer inline-flex items-center rounded-lg px-4 py-2 text-center text-sm font-medium 
+                    ${isCancelled ? "bg-gray-300 text-gray-500 cursor-not-allowed" : "bg-amber-300 text-secondary hover:bg-yellow-300 focus:ring-cyan-300"}`}
+                  onClick={!isCancelled ? onAccept : undefined}
+                >
+                  Accept
+                </div>
+
+                {/* Reject Button - Disabled when UserStatus is CANCELLED */}
+                <div
+                  className={`cursor-pointer inline-flex items-center rounded-lg border border-gray-300 px-4 py-2 text-center text-sm font-medium 
+                    ${isCancelled ? "bg-gray-200 text-gray-500 cursor-not-allowed" : "bg-white text-gray-900 hover:bg-gray-100 focus:ring-gray-200"}`}
+                  onClick={!isCancelled ? onReject : undefined}
+                >
+                  Reject
+                </div>
             </>
           ) : (
             <>
@@ -69,6 +78,7 @@ const InstantOrderCard = ({ active,timeRemaining, location, imageUrl, title, onA
               </div>
               <div
                 className="cursor-pointer inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-900 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200"
+                onClick={onCancel}
               >
                 Cancel
               </div>

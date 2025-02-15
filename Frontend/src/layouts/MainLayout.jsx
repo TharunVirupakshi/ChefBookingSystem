@@ -17,7 +17,7 @@ const MainLayout = ({userType ,removePermission, userId}) => {
    else if(userType === 'ADMIN'){
     navigate('/dashboard/admin',{replace:true});
    }
-   else  navigate('/dashboard/user');
+   else  navigate('/dashboard');
   }
 
 const handleOrders = ()=>{
@@ -27,7 +27,7 @@ const handleOrders = ()=>{
   else if(userType === 'ADMIN'){
     navigate('/dashboard/admin/orders')
   }
-  else navigate('instant-order')
+  else navigate('myorders')
 }
 
 

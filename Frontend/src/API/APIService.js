@@ -141,11 +141,12 @@ async fetchCompletedOrders(chef_id) {
   },
 
   // Update the instant book status to "COMPLETED"
-  async updateInstantBookStatus(orderId, chef_id) {
+  async updateInstantBookStatus(orderId, chef_id, status) {
     try {
       const response = await axios.put(`${API_BASE_URL}/orders/update-instant-book`, {
         orderId,
         chef_id: chef_id,
+        status,
       });
       return response.data;
     } catch (error) {
@@ -171,6 +172,22 @@ async fetchCompletedOrders(chef_id) {
         throw error.response?.data || { message: "Instant booking failed." };
     }
 },
+
+
+// Cancel Instant Booking
+async cancelInstantBooking(chef_id) {
+    try {
+      const response = await axios.post(
+        `${API_BASE_URL}/orders/instant/cancel`,
+        { chef_id }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error cancelling instant booking:", error);
+      throw error.response?.data || { message: "Failed to cancel booking." };
+    }
+  },
+
 
 
 
@@ -200,8 +217,6 @@ async fetchCompletedOrders(chef_id) {
 
     return eventSource;
   },
-
-
 
 
   // Send instant booking response (ACCEPT/REJECT)

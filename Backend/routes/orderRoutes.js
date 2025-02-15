@@ -372,16 +372,59 @@ const instantBookingSchema = Joi.object({
 
 
 
+// router.put("/update-instant-book", async (req, res) => {
+//   const { orderId, chef_id } = req.body; // Assuming you're sending the orderId and chef_id in the request body
+
+//   try {
+//     // Update the instant_book status to "COMPLETED" in chef_status
+//     const chefStatusResult = await client.query(
+//       `UPDATE chef_status
+//          SET instant_book = $1, updated_at = NOW()
+//          WHERE chef_id = $2 AND order_id = $3`,
+//       ["COMPLETED", chef_id, orderId]
+//     );
+
+//     if (chefStatusResult.rowCount === 0) {
+//       console.error(`No matching record in chef_status for chef_id: ${chef_id} and order_id: ${orderId}`);
+//       return res.status(404).json({ message: "Record not found for the given chef_id and order_id in chef_status" });
+//     }
+
+//     // Update the status and end_date_time to "COMPLETED" in orders table
+//     const orderResult = await client.query(
+//       `UPDATE orders
+//          SET status = $1, end_date_time = NOW()
+//          WHERE order_id = $2`,
+//       ["COMPLETED", orderId]
+//     );
+
+//     if (orderResult.rowCount === 0) {
+//       console.error(`No matching record in orders for order_id: ${orderId}`);
+//       return res.status(404).json({ message: "Record not found for the given order_id in orders" });
+//     }
+
+//     // If both queries are successful, send a success response
+//     res.status(200).json({ message: "Order status updated to COMPLETED" });
+//   } catch (error) {
+//     console.error("Error updating instant book status:", error); // More detailed error log
+//     res.status(500).json({ message: "Error updating instant book status", error: error.message });
+//   }
+// });
+
 router.put("/update-instant-book", async (req, res) => {
-  const { orderId, chef_id } = req.body; // Assuming you're sending the orderId and chef_id in the request body
+  const { orderId, chef_id, status } = req.body; // Include status in the request body
+
+  // Ensure status is either COMPLETED or CANCELLED
+  if (!["COMPLETED", "CANCELLED"].includes(status)) {
+    return res.status(400).json({ message: "Invalid status. Allowed values: COMPLETED, CANCELLED" });
+  }
 
   try {
-    // Update the instant_book status to "COMPLETED" in chef_status
+    // Update the instant_book status in chef_status
     const chefStatusResult = await client.query(
       `UPDATE chef_status
          SET instant_book = $1, updated_at = NOW()
          WHERE chef_id = $2 AND order_id = $3`,
-      ["COMPLETED", chef_id, orderId]
+      [status, chef_id, orderId]
     );
 
     if (chefStatusResult.rowCount === 0) {
@@ -389,12 +432,12 @@ router.put("/update-instant-book", async (req, res) => {
       return res.status(404).json({ message: "Record not found for the given chef_id and order_id in chef_status" });
     }
 
-    // Update the status and end_date_time to "COMPLETED" in orders table
+    // Update the status and end_date_time in orders table
     const orderResult = await client.query(
       `UPDATE orders
          SET status = $1, end_date_time = NOW()
          WHERE order_id = $2`,
-      ["COMPLETED", orderId]
+      [status, orderId]
     );
 
     if (orderResult.rowCount === 0) {
@@ -403,13 +446,12 @@ router.put("/update-instant-book", async (req, res) => {
     }
 
     // If both queries are successful, send a success response
-    res.status(200).json({ message: "Order status updated to COMPLETED" });
+    res.status(200).json({ message: `Order status updated to ${status}` });
   } catch (error) {
-    console.error("Error updating instant book status:", error); // More detailed error log
+    console.error("Error updating instant book status:", error);
     res.status(500).json({ message: "Error updating instant book status", error: error.message });
   }
 });
-
 
 
 
@@ -535,6 +577,96 @@ router.post("/instant", async (req, res) => {
       .json({ success: false, message: "Instant booking failed." });
   }
 });
+
+
+
+router.post("/instant/cancel", async (req, res) => {
+  try {
+    const { chef_id } = req.body;
+    if (!chef_id) {
+      return res.status(400).json({
+        success: false,
+        message: "Chef ID is required.",
+      });
+    }
+
+    const activeRequestKey = `instant_booking:${chef_id}`;
+
+    // Check if an active request exists
+    const existingRequest = await redisClient.get(activeRequestKey);
+    if (!existingRequest) {
+      return res.status(400).json({
+        success: false,
+        message: "No active instant booking request found for this chef.",
+      });
+    }
+
+    // Parse request data
+    const requestData = JSON.parse(existingRequest);
+
+    // If already cancelled, prevent redundant cancellation
+    if (requestData.status === "CANCELLED") {
+      return res.status(400).json({
+        success: false,
+        message: "This booking has already been cancelled.",
+      });
+    }
+
+    // Update status to CANCELLED
+    requestData.status = "CANCELLED";
+
+    // ✅ Get remaining TTL before updating
+    let ttl = await redisClient.ttl(activeRequestKey);
+
+    // 🔹 Ensure TTL is valid (Redis returns -1 for NO_EXPIRY and -2 for NON_EXISTENT keys)
+    if (ttl === -1) {
+      console.warn(`⚠️ Warning: Key ${activeRequestKey} has no expiration set.`);
+      ttl = 180; // Default TTL fallback (3 minutes)
+    } else if (ttl === -2) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking request expired or does not exist.",
+      });
+    }
+
+    // ✅ Update Redis with the **same TTL**
+    await redisClient.setEx(activeRequestKey, ttl, JSON.stringify(requestData));
+
+    // Send notification to the chef
+    const fcmToken = await redisService.getFCMToken(chef_id);
+    if (fcmToken) {
+      const notificationData = {
+        chef_id: String(chef_id),
+        customer_id: String(requestData.customer_id),
+        recipe_id: String(requestData.recipe_id),
+        recipe_title: String(requestData.recipe_title || ""),
+        type: "INSTANT_BOOKING_CANCELLED",
+      };
+
+      await sendFCMNotification(
+        fcmToken,
+        "❌ Instant Booking Cancelled",
+        "The customer has cancelled the instant booking request.",
+        notificationData
+      );
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Instant booking status updated to CANCELLED, and chef notified.",
+    });
+  } catch (error) {
+    console.error("❌ Error cancelling instant booking:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to cancel the instant booking.",
+    });
+  }
+});
+
+
+
+
 
 // SSE Endpoint for Instant Booking TTL and Status
 router.get("/sse/instant-booking/:chef_id", async (req, res) => {
@@ -837,30 +969,7 @@ router.post("/instant/response", async (req, res) => {
       //   ["AVAILABLE", chef_id]
       // );
 
-      await client.query("BEGIN"); 
-      try {
-        // Insert CANCELLED order entry first
-        const orderResult = await client.query(
-          `INSERT INTO orders (customer_id, chef_id, recipe_id, total_price, status, type, start_date_time, end_date_time, latitude, longitude, chef_latitude, chef_longitude)
-           VALUES ($1, $2, $3, $4, $5, 'INSTANT', NOW(), NOW(), $6, $7, $8, $9)
-           RETURNING order_id`,
-          [customer_id, chef_id, recipe_id, 1000, "CANCELLED", requestData.latitude, requestData.longitude, chef_latitude, chef_longitude]
-        );
-        const orderId = orderResult.rows[0].order_id;
-
-        // Update `chef_status` after inserting order
-        await client.query(
-          "UPDATE chef_status SET instant_book = $1, order_id = $2, updated_at = NOW() WHERE chef_id = $3",
-          ["CANCELLED", orderId, chef_id]
-        );
-
-        await client.query("COMMIT");
-      } catch (err) {
-        await client.query("ROLLBACK");
-        throw err;
-      }
-
-
+   
       // Send notification to the customer
       const userNotificationData = {
         chef_id: String(chef_id),
@@ -886,6 +995,8 @@ router.post("/instant/response", async (req, res) => {
         "The chef has rejected your instant booking request.",
         userNotificationData
       );
+      
+      await redisClient.del(activeRequestKey);
 
       return res.status(200).json({
         success: true,

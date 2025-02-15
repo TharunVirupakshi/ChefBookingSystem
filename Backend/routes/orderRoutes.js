@@ -19,6 +19,33 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.get("/:chef_id", async (req, res) => {
+  const { chef_id } = req.params;
+
+  if (!chef_id) {
+    return res.status(400).json({ message: "chef_id is required" });
+  }
+
+  try {
+    const query = `
+      SELECT orders.*, recipe.*
+      FROM orders
+      LEFT JOIN recipe ON orders.recipe_id = recipe.recipe_id
+      WHERE orders.chef_id = $1 AND orders.deleted_at IS NULL
+    `;
+
+    const result = await client.query(query, [chef_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No orders found for this chef." });
+    }
+
+    res.status(200).json(result.rows);
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    res.status(500).json({ message: "Error fetching orders" });
+  }
+});
 
 
 
@@ -80,46 +107,51 @@ router.get('/instant-order', async (req, res) => {
 //     }
 //   });
 
+router.get("/instant/current", async (req, res) => {
+  const { chef_id } = req.query;  // userId is the chef_id
 
-router.get("/:chef_id", async (req, res) => {
-  const { chef_id } = req.params;  // userId is the chef_id
+  if (!chef_id) {
+    return res.status(400).json({ message: "chef_id is required" });
+  }
 
   try {
-      console.log("🔹 Fetching orders for chef_id:", chef_id);
+    console.log("🔹 Fetching orders for chef_id:", chef_id);
 
-      // ✅ Step 1: Check if chef_id exists in chef_status and instant_book status is PENDING
-      const chefStatusQuery = `
-          SELECT order_id 
-          FROM chef_status 
-          WHERE chef_id = $1 AND instant_book = 'PENDING'
-      `;
-      const chefStatusResult = await client.query(chefStatusQuery, [chef_id]);
+    // ✅ Step 1: Check if chef_id exists in chef_status and instant_book status is PENDING
+    const chefStatusQuery = `
+      SELECT order_id 
+      FROM chef_status 
+      WHERE chef_id = $1 AND instant_book = 'PENDING'
+    `;
+    const chefStatusResult = await client.query(chefStatusQuery, [chef_id]);
 
-      if (chefStatusResult.rows.length === 0) {
-          return res.status(404).json({ message: "No pending instant bookings for this chef." });
-      }
+    if (chefStatusResult.rows.length === 0) {
+      return res.status(404).json({ message: "No pending instant bookings for this chef." });
+    }
 
-      // ✅ Step 2: Get the order_id from chef_status
-      const orderId = chefStatusResult.rows[0].order_id;
+    // ✅ Step 2: Get the order_id from chef_status
+    const orderId = chefStatusResult.rows[0].order_id;
 
-      // ✅ Step 3: Fetch the corresponding order from orders table with type = 'INSTANT' and status = 'PENDING'
-      const orderQuery = `
-          SELECT * 
-          FROM orders 
-          WHERE order_id = $1 AND type = 'INSTANT' AND status = 'PENDING'
-      `;
-      const orderResult = await client.query(orderQuery, [orderId]);
+    // ✅ Step 3: Fetch the corresponding order from orders table with type = 'INSTANT' and status = 'PENDING'
+    // AND JOIN with recipes table to get recipe details
+    const orderQuery = `
+      SELECT o.*, r.*
+      FROM orders o
+      JOIN recipe r ON o.recipe_id = r.recipe_id
+      WHERE o.order_id = $1 AND o.type = 'INSTANT' AND o.status = 'PENDING'
+    `;
+    const orderResult = await client.query(orderQuery, [orderId]);
 
-      if (orderResult.rows.length === 0) {
-          return res.status(404).json({ message: "No matching instant pending orders found." });
-      }
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({ message: "No matching instant pending orders found." });
+    }
 
-      // ✅ Step 4: Return the order details
-      return res.status(200).json(orderResult.rows[0]);
+    // ✅ Step 4: Return the order details with recipe information
+    return res.status(200).json(orderResult.rows);
 
   } catch (error) {
-      console.error("❌ Error fetching order by chef_id:", error);
-      res.status(500).json({ message: "Error fetching order" });
+    console.error("❌ Error fetching order by chef_id:", error);
+    res.status(500).json({ message: "Error fetching order" });
   }
 });
 
@@ -143,7 +175,6 @@ router.get("/completed-orders/:chef_id", async (req, res) => {
   }
 });
 
-
 router.get("/customer-orders/:customer_id", async (req, res) => {
   const { customer_id } = req.params; // Extract customer_id from URL params
 
@@ -152,8 +183,12 @@ router.get("/customer-orders/:customer_id", async (req, res) => {
   }
 
   try {
+    // Query to fetch orders along with recipe details
     const result = await client.query(
-      "SELECT * FROM orders WHERE customer_id = $1 AND deleted_at IS NULL", // Removed status condition
+      `SELECT o.*, r.* 
+       FROM orders o
+       JOIN recipe r ON o.recipe_id = r.recipe_id
+       WHERE o.customer_id = $1 AND o.deleted_at IS NULL`,
       [customer_id]
     );
     
@@ -163,10 +198,11 @@ router.get("/customer-orders/:customer_id", async (req, res) => {
 
     res.status(200).json(result.rows);
   } catch (error) {
-    console.error("Error fetching orders:", error);
-    res.status(500).json({ message: "Error fetching orders" });
+    console.error("Error fetching orders and recipes:", error);
+    res.status(500).json({ message: "Error fetching orders and recipes" });
   }
 });
+
 
 
 //   router.get("/:chef_id/:order_id", async (req, res) => {
@@ -466,6 +502,14 @@ router.post("/instant", async (req, res) => {
   const { chef_id, customer_id, recipe_id, latitude, longitude } = value;
 
   try {
+
+
+    // 1️⃣ Check Chef Status in Redis
+    const chefStatus = await redisService.getChefStatus(chef_id);
+    if (chefStatus !== 'READY') {
+        return res.status(400).json({success: false, message: 'Chef is currently busy or unavailable' });
+    }
+
     // 0️⃣ Check if the recipe belongs to the chef and get the recipe title
     const recipeResult = await client.query(
       `SELECT title 
@@ -496,26 +540,44 @@ router.post("/instant", async (req, res) => {
       });
     }
 
-    // 2️⃣ Acquire Redis Lock to prevent concurrent requests
-    const lockAcquired = await redisService.acquireLock(
-      `chef_lock_${chef_id}`,
-      60
-    );
-    if (!lockAcquired) {
-      return res.status(400).json({
-        success: false,
-        message: "Chef is already locked by another request.",
-      });
-    }
+      // 2️⃣ Acquire Redis Lock to prevent concurrent requests
+      const lockAcquired = await redisService.acquireLock(
+        `chef_lock_${chef_id}`,
+        60
+      );
+      if (!lockAcquired) {
+        return res.status(400).json({
+          success: false,
+          message: "Chef is already locked by another request.",
+        });
+      }
 
-    const fcmToken = await redisService.getFCMToken(chef_id);
-    if (!fcmToken) {
-      await redisService.releaseLock(`chef_lock_${chef_id}`);
-      return res.status(400).json({
-        success: false,
-        message: "Chef is not registered for notifications.",
-      });
-    }
+      const fcmToken = await redisService.getFCMToken(chef_id);
+      if (!fcmToken) {
+        await redisService.releaseLock(`chef_lock_${chef_id}`);
+        return res.status(400).json({
+          success: false,
+          message: "Chef is not registered for notifications.",
+        });
+      }
+
+          // 3️⃣ Begin Transaction
+      await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
+
+      // 4️⃣ Check Chef's Instant Booking Status
+      const statusResult = await client.query(
+          'SELECT instant_book FROM chef_status WHERE chef_id = $1 FOR UPDATE',
+          [chef_id]
+      );
+
+
+      if (statusResult.rows[0].instant_book == 'PENDING' && statusResult.rows[0].order_id !== null) {
+          await client.query('ROLLBACK');
+          await redisService.releaseLock(`chef_lock_${chef_id}`);
+          return res.status(400).json({success: false, message: 'Chef is not available for instant booking' });
+      }
+
+      await client.query('COMMIT');
 
     // 3️⃣ Generate a unique req_id and prepare request data
     const req_id = uuidv4();
@@ -565,6 +627,13 @@ router.post("/instant", async (req, res) => {
     });
   } catch (err) {
     console.error("Error during instant booking:", err);
+
+    try {
+        // Rollback DB Transaction
+        await client.query('ROLLBACK');
+    } catch (rollbackErr) {
+        console.error('Error during ROLLBACK:', rollbackErr);
+    }
 
     try {
       await redisService.releaseLock(`chef_lock_${chef_id}`);

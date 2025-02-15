@@ -107,9 +107,11 @@ const APIService = {
 
 
 // Fetch a pending instant order by chef_id from chef_status table
-async fetchOrderByChefId(chef_id) {
+async fetchCurrentInstantOrderByChefId(chef_id) {
     try {
-        const response = await axios.get(`${API_BASE_URL}/orders/${chef_id}`);
+        const response = await axios.get(`${API_BASE_URL}/orders/instant/current`,{
+          params: {chef_id}
+        });
         return response.data;
     } catch (error) {
         console.error('Error fetching order by chef_id:', error);
@@ -117,6 +119,15 @@ async fetchOrderByChefId(chef_id) {
     }
 },
 
+async fetchAllOrdersByChefId(chef_id){
+  try {
+    const response = await axios.get(`${API_BASE_URL}/orders/${chef_id}`)
+    return response.data
+  } catch (error) {
+    console.error('Error fetching all orders by chef_id:', error);
+    throw error; 
+  }
+},
 
 
 // Fetch completed orders by chef_id

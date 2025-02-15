@@ -10,8 +10,10 @@ function OrderPage({customer_id}) {
   const {notifications} = useNotification();
   const location = useLocation();
   const [orders,setOrders] = useState([]);
+  const [activeOrders, setActiveOrders] = useState([]);
+
   const [status, setStatus] = useState("Not Responded");
-  const [recipes,setRecipes] = useState([]);
+  const [ recipes,setRecipes] = useState([]);
   const [latitude, setLatitude] = useState(null);
   const [longitude, setLongitude] = useState(null);  
   const [recipeid,setRecipeId] = useState(null);
@@ -53,32 +55,36 @@ function OrderPage({customer_id}) {
   }, [notifications]);
 
   
-useEffect(() => {
+  useEffect(() => {
   const fetchPastOrdersAndRecipes = async () => {
     try {
-      // Fetch completed orders using APIService
+      // Fetch all customer orders
       const orders = await APIService.fetchCustomerOrders(customer_id);
-      // console.log('order',orders)
-      setOrders(orders);
+      setOrders(orders); // Store all orders
 
       if (orders.length === 0) return;
 
-      //Fetch recipes for each order
-      const recipePromises = orders.map((order) =>
-        APIService.fetchRecipesByRecipeId(order.recipe_id)
-      );
+      // Filter pending orders
+      const pendingOrders = orders.filter(order => order.status === "PENDING" || order.status === "CONFIRMED");
+      setActiveOrders(pendingOrders); // Store pending orders separately
 
-      const recipes = await Promise.all(recipePromises);
-      // console.log("Fetched Recipes:", recipes); // Debugging log
-      setRecipes(recipes);
+      console.log("ACTIVE ORDERS: ", pendingOrders)
+      // // Fetch recipes for each order
+      // const recipePromises = orders.map(order =>
+      //   APIService.fetchRecipesByRecipeId(order.recipe_id)
+      // );
+
+      // const recipes = await Promise.all(recipePromises);
+      // setRecipes(recipes);
+
     } catch (error) {
       console.error("Error fetching completed orders and recipes:", error);
     }
   };
 
- 
-    fetchPastOrdersAndRecipes();
+  fetchPastOrdersAndRecipes();
 }, [customer_id]);
+
 //   console.log("completed orders..", orders);
 //   console.log("completed recipes..", recipes);
 // console.log('latest accepted booking',latestAcceptedBooking)
@@ -92,46 +98,42 @@ useEffect(() => {
 
   return (
     <div>
-         {orders && recipes.length > 0 ?  (
-         
-        <div className="py-5 p-20 gap-2">
-        <h1 className="font-semibold text-xl py-2 text-gray-500">Active Order</h1>
-          <div className="flex gap-2 w-full">
-        <RecipeStatusCard
-          Statustitle={
-            status === "ACCEPTED"
-              ? "Booked"
-              : status === "REJECTED"
-              ? "Rejected"
-              : "Cancelled"
-          }
-          locationName={locationName}
-          title={recipes.recipe_title}
-
-        />
-         <div className="w-full border rounded-lg overflow-hidden">
-              {/* <MapsCard
+      {activeOrders.length > 0 ? (
+        activeOrders.map((order) => (
+          <div className="py-5 p-20 gap-2">
+            <h1 className="font-semibold text-xl py-2 text-gray-500">
+              Active Order
+            </h1>
+            <div className="flex gap-2 w-full">
+              <RecipeStatusCard
+                Statustitle={
+                  order?.status === "PENDING"
+                    ? "Booked"
+                    : order?.status === "CANCELLED"
+                    ? "Cancelled"
+                    : "-"
+                }
+                locationName={""}
+                title={order?.title}
+              />
+              <div className="w-full border rounded-lg overflow-hidden">
+                {/* <MapsCard
                 latitude={parseFloat(instantBookingNotification.data.latitude) || 12.9716}
                 longitude={parseFloat(instantBookingNotification.data.longitude) || 77.5946}
               /> */}
+              </div>
             </div>
-        </div>
-
-       
-        </div>
+          </div>
+        ))
       ) : (
         <div className="w-full text-center text-gray-500 py-10">
-            <h2 className="text-lg">📭 You have no orders.</h2>
-          </div>
-      )
-    }
-    <h1 className="font-normal text-xl text-gray-500">Order History</h1>
-        <Table
-        customerOrders={orders}
-        customerRecipes={recipes}
-      />
-      </div>
-  )
+          <h2 className="text-lg">📭 You have no orders.</h2>
+        </div>
+      )}
+      <h1 className="font-normal text-xl text-gray-500">Order History</h1>
+      <Table customerOrders={orders} customerRecipes={recipes} />
+    </div>
+  );
 }
 
 export default OrderPage
@@ -294,13 +296,6 @@ console.log('chefData',chefData)
         </thead>
         <tbody>
           {customerOrders.map((order, index) => {
-            // Flatten the completedRecipes array (if it's an array of arrays)
-            const flattenedRecipes = customerRecipes.flat();
-
-            // Find the recipe based on recipe_id
-            const recipe = flattenedRecipes.find(
-              (recipe) => recipe.recipe_id === order.recipe_id
-            );
 
             // Log the recipe for debugging
             {/* console.log("Recipe:", recipe); */}
@@ -331,7 +326,7 @@ console.log('chefData',chefData)
                     {/* <div class="font-normal text-gray-500">neil.sims@flowbite.com</div> */}
                   </div>
                 </th>
-                <td class="px-6 py-4">{recipe?.title || "No recipe title"}</td>
+                <td class="px-6 py-4">{order?.title || "No recipe title"}</td>
                 <td class="px-6 py-4">
                   {
                     // Combine today's date with the provided time string and format it

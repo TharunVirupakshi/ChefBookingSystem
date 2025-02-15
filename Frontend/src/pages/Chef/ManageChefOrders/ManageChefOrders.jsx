@@ -48,6 +48,27 @@ const ManageChefOrders = ({ chef_id }) => {
       : "Unknown Location";
   }
 
+  const getLocName = async (lat, lng) => {
+    try {
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`
+      );
+
+      const data = await response.json();
+
+      if (data.status === "OK" && data.results.length > 0) {
+        console.log("Geocoded data", data);
+        const locName = getAllSublocalityNames(data.results);
+        return locName
+      } else {
+        return "Unknown Location";
+      }
+    } catch (error) {
+      console.error("Error fetching location:", error);
+      return "Unknown Location";
+    } 
+  }
+
   // Reverse Geocode to get the address
   const reverseGeocode = async (lat, lng) => {
     try {
@@ -148,9 +169,9 @@ const ManageChefOrders = ({ chef_id }) => {
       const lng = parseFloat(latestInstantBooking.data.longitude);
 
       // Trigger reverse geocoding
-      // if (lat && lng) {
-      //   reverseGeocode(lat, lng);
-      // }
+      if (lat && lng) {
+        reverseGeocode(lat, lng);
+      }
 
       // Initialize SSE for TTL updates
       // const eventSource = new EventSource(
@@ -395,42 +416,51 @@ const ManageChefOrders = ({ chef_id }) => {
   };
 
   const fetchOrder = async (chef_id) => {
-    if (!chef_id) {
-      console.warn("⚠️ Missing required data to fetch the order.");
-      toast.error("Missing required data to fetch the order.");
+  if (!chef_id) {
+    console.warn("⚠️ Missing required data to fetch the order.");
+    toast.error("Missing required data to fetch the order.");
+    return;
+  }
+
+  try {
+    console.log("🔹 Fetching orders for chef_id:", chef_id);
+    
+    const result = await APIService.fetchCurrentInstantOrderByChefId(chef_id);
+
+    if (!result || result.length === 0) {
+      console.warn("ℹ️ No pending orders found.");
+      setOrderData(null);
+      toast.info("No pending orders found.");
       return;
     }
 
-    try {
-      console.log("🔹 Fetching orders for chef_id:", chef_id);
+    console.log("✅ Order Data Fetched:", result);
 
-      const result = await APIService.fetchOrderByChefId(chef_id);
-
-      if (result && Object.keys(result).length > 0) {
-        // Check if result is not empty
-        console.log("✅ Order Data Fetched:", result);
-        setOrderData(result);
-
-        if (result.recipe_id) {
-          fetchRecipe(chef_id, result.recipe_id);
+    // Fetch locations for all orders in parallel
+    const ordersWithLocation = await Promise.all(
+      result.map(async (order) => {
+        try {
+          const locName = await getLocName(order.latitude, order.longitude);
+          return { ...order, location: locName }; // Add location to order data
+        } catch (error) {
+          console.error(`❌ Error fetching location for order ${order.order_id}:`, error);
+          return { ...order, location: "Unknown location" }; // Default if error occurs
         }
-      } else {
-        console.warn("ℹ️ No pending orders found.");
-        setOrderData(null);
-        toast.info("No pending orders found."); // Show info toast instead of error
-        return; // Prevents execution from going further
-      }
-    } catch (error) {
-      console.error("❌ Unexpected error fetching orders:", error);
+      })
+    );
 
-      // Only show error toast if it's an actual error, not an empty result
-      if (error.message !== "No orders found") {
-        toast.error("An error occurred while fetching orders.");
-      }
+    setOrderData(ordersWithLocation);
+  } catch (error) {
+    console.error("❌ Unexpected error fetching orders:", error);
 
-      setOrderData(null);
+    if (error.message !== "No orders found") {
+      toast.error("An error occurred while fetching orders.");
     }
-  };
+
+    setOrderData(null);
+  }
+};
+
 
   useEffect(() => {
     // console.log("Received chef_id in ManageChefOrders:", chef_id);
@@ -523,19 +553,19 @@ const ManageChefOrders = ({ chef_id }) => {
     const fetchCompletedOrdersAndRecipes = async () => {
       try {
         // Fetch completed orders using APIService
-        const orders = await APIService.fetchCompletedOrders(chef_id);
+        const orders = await APIService.fetchAllOrdersByChefId(chef_id);
+        
+        if (orders.length === 0) return;
         setCompletedOrders(orders);
 
-        if (orders.length === 0) return;
+        // // Fetch recipes for each order
+        // const recipePromises = orders.map((order) =>
+        //   APIService.fetchRecipeByChefIdAndRecipeId(chef_id, order.recipe_id)
+        // );
 
-        // Fetch recipes for each order
-        const recipePromises = orders.map((order) =>
-          APIService.fetchRecipeByChefIdAndRecipeId(chef_id, order.recipe_id)
-        );
-
-        const recipes = await Promise.all(recipePromises);
-        // console.log("Fetched Recipes:", recipes); // Debugging log
-        setCompletedRecipes(recipes);
+        // const recipes = await Promise.all(recipePromises);
+        // // console.log("Fetched Recipes:", recipes); // Debugging log
+        // setCompletedRecipes(recipes);
 
         //Fetch customer details using customer_id
       //   const uniqueCustomerIds = [...new Set(orders.map((order) => order.customer_id))];
@@ -611,34 +641,36 @@ const ManageChefOrders = ({ chef_id }) => {
 
             {/* Map displaying customer location */}
             <div className="w-full border rounded-lg overflow-hidden">
-              {/* <MapsCard
+              <MapsCard
                 latitude={parseFloat(instantBookingNotification.data.latitude) || 12.9716}
                 longitude={parseFloat(instantBookingNotification.data.longitude) || 77.5946}
-              /> */}
+              />
             </div>
           </div>
-        ) : orderData && recipeData?.length > 0 ? (
+        ) : orderData?.length > 0 ? orderData.map( order => (
           <div className="flex gap-2 w-full">
-            {/* Instant Order Card for fetched orderData */}
-            <InstantOrderCard
-              title={`Order ${recipeData[0]?.title}`}
-              description={`Total Price: ₹${orderData.total_price}`}
-              recipeId={orderData.recipe_id}
-              customerId={orderData.customer_id}
-              location={orderLocationName}
-              onComplete={handleComplete}
-              onCancel={handleCancel}
-              active={false}
-              UserStatus={orderstatus}
+          {/* Instant Order Card for fetched orderData */}
+          <InstantOrderCard
+            title={`Order ${order?.title}`}
+            description={`Total Price: ₹${order.total_price}`}
+            recipeId={order?.recipe_id}
+            customerId={order?.customer_id}
+            location={order?.location}
+            onComplete={handleComplete}
+            onCancel={handleCancel}
+            active={false}
+            UserStatus={orderstatus}
+          />
+          <div className="w-full border rounded-lg overflow-hidden">
+            <MapsCard
+              latitude={parseFloat(order?.latitude) || 0}
+              longitude={parseFloat(order?.longitude) || 0}
             />
-            <div className="w-full border rounded-lg overflow-hidden">
-              {/* <MapsCard
-          latitude={parseFloat(orderData.latitude) || 12.9716}
-          longitude={parseFloat(orderData.longitude) || 77.5946}
-        /> */}
-            </div>
           </div>
-        ) : (
+        </div>
+        ))
+        
+         : (
           <div className="w-full text-center text-gray-500 py-10">
             <h2 className="text-lg">📭 You have no instant orders.</h2>
           </div>
@@ -808,12 +840,12 @@ console.log('customerdata',customerData)
         <tbody>
           {completedOrders.map((order, index) => {
             // Flatten the completedRecipes array (if it's an array of arrays)
-            const flattenedRecipes = completedRecipes.flat();
+            {/* const flattenedRecipes = completedRecipes.flat(); */}
 
             // Find the recipe based on recipe_id
-            const recipe = flattenedRecipes.find(
+            {/* const recipe = flattenedRecipes.find(
               (recipe) => recipe.recipe_id === order.recipe_id
-            );
+            ); */}
 
             // Log the recipe for debugging
             {/* console.log("Recipe:", recipe); */}
@@ -840,11 +872,11 @@ console.log('customerdata',customerData)
                 >
                   {/* <img class="w-10 h-10 rounded-full" src="/docs/images/people/profile-picture-1.jpg" alt="Jese image"/> */}
                   <div class="ps-3">
-                    <div class="text-base font-semibold">{order.order_id}</div>
+                    <div class="text-base font-semibold">{order?.order_id}</div>
                     {/* <div class="font-normal text-gray-500">neil.sims@flowbite.com</div> */}
                   </div>
                 </th>
-                <td class="px-6 py-4">{recipe?.title || "No recipe title"}</td>
+                <td class="px-6 py-4">{order?.title || "No recipe title"}</td>
                 <td class="px-6 py-4">
                   {
                     // Combine today's date with the provided time string and format it

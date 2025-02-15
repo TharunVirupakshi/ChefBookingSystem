@@ -52,7 +52,7 @@ const NavBar = ({username, email, handleSignOut = ()=>{} ,isShowAvatar = true,ha
 
 
       <Navbar.Collapse>
-        <Navbar.Link href="#" active>
+        <Navbar.Link href="/" active>
           Home
         </Navbar.Link>
         <Navbar.Link href="#">About</Navbar.Link>

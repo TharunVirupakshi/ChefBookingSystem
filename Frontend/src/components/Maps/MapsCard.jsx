@@ -12,7 +12,7 @@ const DEFAULT_LATITUDE = 12.9716;
 const DEFAULT_LONGITUDE = 77.5946;
 
 
-const MapsCard = ({ latitude = DEFAULT_LATITUDE, longitude = DEFAULT_LONGITUDE}) => {
+const MapsCard = ({ latitude, longitude}) => {
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_JS_API_KEY,
   });

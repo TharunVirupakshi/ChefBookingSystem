@@ -319,6 +319,7 @@ const InstantOrderStatus = () => {
 
     eventSource.onerror = (err) => {
       console.error("SSE Error:", err);
+      setStatus("ERROR")
       eventSource.close(); // Ensure SSE is closed on error
     };
 
@@ -341,7 +342,7 @@ const InstantOrderStatus = () => {
           View Orders
         </button>
       );
-    } else if (status === "REJECTED" || ttl === 0) {
+    } else if (status === "REJECTED" || ttl === 0 || status === "ERROR") {
       return (
         <button
           className="text-gray-600"
@@ -406,6 +407,12 @@ const InstantOrderStatus = () => {
         {status === "REJECTED" && (
           <div className="flex flex-col items-center h-1/2 justify-center gap-6">
             <p className="text-red-500 text-lg">Order Rejected!</p>
+            <FaTimesCircle className="text-red-500 text-5xl" />
+          </div>
+        )}
+        {status === "ERROR" && (
+          <div className="flex flex-col items-center h-1/2 justify-center gap-6">
+            <p className="text-red-500 text-lg">Something went wrong!</p>
             <FaTimesCircle className="text-red-500 text-5xl" />
           </div>
         )}

@@ -449,6 +449,11 @@ const instantBookingSchema = Joi.object({
 router.put("/update-instant-book", async (req, res) => {
   const { orderId, chef_id, status } = req.body; // Include status in the request body
 
+  if (!orderId || !chef_id || !status) {
+    return res.status(400).json({ message: "One or more params are missing" });
+  }
+
+
   // Ensure status is either COMPLETED or CANCELLED
   if (!["COMPLETED", "CANCELLED"].includes(status)) {
     return res.status(400).json({ message: "Invalid status. Allowed values: COMPLETED, CANCELLED" });
@@ -533,11 +538,15 @@ router.post("/instant", async (req, res) => {
     const existingRequest = await redisClient.get(activeRequestKey);
 
     if (existingRequest) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "There is already an active instant booking request for this chef.",
-      });
+      const data = JSON.parse(existingRequest)
+
+      if(!(data.status == "CANCELLED" || data.status == "REJECTED")){
+        return res.status(400).json({
+          success: false,
+          message:
+            "There is already an active instant booking request for this chef.",
+        });
+      }
     }
 
       // 2️⃣ Acquire Redis Lock to prevent concurrent requests
@@ -1065,7 +1074,6 @@ router.post("/instant/response", async (req, res) => {
         userNotificationData
       );
       
-      await redisClient.del(activeRequestKey);
 
       return res.status(200).json({
         success: true,

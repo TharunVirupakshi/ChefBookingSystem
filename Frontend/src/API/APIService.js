@@ -156,7 +156,7 @@ async fetchCompletedOrders(chef_id) {
     try {
       const response = await axios.put(`${API_BASE_URL}/orders/update-instant-book`, {
         orderId,
-        chef_id: chef_id,
+        chef_id,
         status,
       });
       return response.data;

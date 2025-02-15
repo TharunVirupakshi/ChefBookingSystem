@@ -95,43 +95,60 @@ const UserOrder = () => {
 
 
   // GET USER LOCATION
-  useEffect(() => {
-  const saveLoc = (pos) => {
-    const loc = {
-      lat: pos.coords.latitude,
-      long: pos.coords.longitude,
-    };
-    console.log("User location: ", loc);
-    setUserGeolocation(loc);
-  };
+ // GET USER LOCATION
+useEffect(() => {
+  let retryCount = 0;
+  const maxRetries = 3; // Maximum number of retry attempts
 
-  const handleError = (error) => {
-    console.error("Geolocation error:", error.message);
-    switch (error.code) {
-      case error.PERMISSION_DENIED:
-        alert("User denied the request for Geolocation.");
-        break;
-      case error.POSITION_UNAVAILABLE:
-        alert("Location information is unavailable.");
-        break;
-      case error.TIMEOUT:
-        alert("The request to get user location timed out.");
-        break;
-      case error.UNKNOWN_ERROR:
-        alert("An unknown error occurred.");
-        break;
+  const fetchLocation = () => {
+    if (!navigator.geolocation) {
+      alert("Geolocation is not supported by this browser!");
+      return;
     }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc = {
+          lat: pos.coords.latitude,
+          long: pos.coords.longitude,
+        };
+        console.log("✅ User location:", loc);
+        setUserGeolocation(loc);
+      },
+      (error) => {
+        console.error("❌ Geolocation error:", error.message);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            alert("You denied the location request. Please enable location services.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            alert("Location information is unavailable. Retrying...");
+            break;
+          case error.TIMEOUT:
+            alert("The request to get user location timed out. Retrying...");
+            break;
+          default:
+            alert("An unknown error occurred.");
+            break;
+        }
+
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(`🔄 Retrying location fetch (${retryCount}/${maxRetries})...`);
+          setTimeout(fetchLocation, 3000); // Wait 3 seconds before retrying
+        } else {
+          alert("Failed to get location after multiple attempts.");
+        }
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
   };
 
-  if (navigator.geolocation) {
-    navigator.geolocation.getCurrentPosition(saveLoc, handleError, {
-      enableHighAccuracy: true,
-      timeout: 10000, // Set a timeout for better reliability
-      maximumAge: 0,  // Do not cache old positions
-    });
-  } else {
-    alert("Geolocation is not supported by this browser!");
-  }
+  fetchLocation(); // Initial call
 }, []);
 
   useEffect(() => {
@@ -149,6 +166,8 @@ const UserOrder = () => {
   //   toast.error("Missing required data. Please try again.");
   //   return;
   // }
+    
+
   const requestData = {
     chef_id,
     customer_id : auth.currentUser.uid,
@@ -166,6 +185,8 @@ const UserOrder = () => {
     //     body: JSON.stringify(requestData),
     // });
     // const result = await response.json();
+
+
     const response = await APIService.instantBooking(
       requestData.chef_id,
       requestData.customer_id,
@@ -184,7 +205,7 @@ const UserOrder = () => {
       }
     } catch (error) {
       console.error("Error placing order:", error);
-      toast.error("An error occurred. Please try again.");
+      toast.error(error?.message || "An error occurred. Please try again.");
     }
   };
 

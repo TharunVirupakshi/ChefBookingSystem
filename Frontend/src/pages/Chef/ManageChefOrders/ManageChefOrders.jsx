@@ -497,11 +497,13 @@ const ManageChefOrders = ({ chef_id }) => {
   //   }
   // };
 
-  const handleComplete = async () => {
-    const orderId = orderData?.order_id;
+  const handleComplete = async (order_id) => {
+    
+    if(!order_id) toast.error("Order ID required") 
+    
     try {
       const result = await APIService.updateInstantBookStatus(
-        orderId,
+        order_id,
         chef_id,
         "COMPLETED"
       );
@@ -509,7 +511,7 @@ const ManageChefOrders = ({ chef_id }) => {
 
       if (result.message === "Order status updated to COMPLETED") {
         toast.success("Order marked as completed.");
-        setAccepted(false);
+        // setAccepted(false);
         // handleCloseCard();
       } else {
         toast.error(result.message || "Failed to complete the order.");
@@ -523,11 +525,13 @@ const ManageChefOrders = ({ chef_id }) => {
     }
   };
 
-  const handleCancel = async () => {
-    const orderId = orderData?.order_id;
+  const handleCancel = async (order_id) => {
+    
+    if(!order_id) toast.error("Order ID required")
+
     try {
       const result = await APIService.updateInstantBookStatus(
-        orderId,
+        order_id,
         chef_id,
         "CANCELLED"
       );
@@ -542,7 +546,7 @@ const ManageChefOrders = ({ chef_id }) => {
       }
     } catch (error) {
       console.error("Error cancelling the order:", error);
-      toast.error("Error cancelling the order.");
+      toast.error( "Error cancelling the order.");
     } finally {
       const id = auth.currentUser.uid;
       fetchOrder(id);
@@ -585,7 +589,7 @@ const ManageChefOrders = ({ chef_id }) => {
     if (chef_id) {
       fetchCompletedOrdersAndRecipes();
     }
-  }, [chef_id]);
+  }, [chef_id, orderData]);
 
 
 
@@ -642,8 +646,8 @@ const ManageChefOrders = ({ chef_id }) => {
             {/* Map displaying customer location */}
             <div className="w-full border rounded-lg overflow-hidden">
               <MapsCard
-                latitude={parseFloat(instantBookingNotification.data.latitude) || 12.9716}
-                longitude={parseFloat(instantBookingNotification.data.longitude) || 77.5946}
+                latitude={parseFloat(instantBookingNotification.data.latitude) || 0}
+                longitude={parseFloat(instantBookingNotification.data.longitude) || 0}
               />
             </div>
           </div>
@@ -656,8 +660,8 @@ const ManageChefOrders = ({ chef_id }) => {
             recipeId={order?.recipe_id}
             customerId={order?.customer_id}
             location={order?.location}
-            onComplete={handleComplete}
-            onCancel={handleCancel}
+            onComplete={() => handleComplete(order.order_id)}
+            onCancel={() => handleCancel(order.order_id)}
             active={false}
             UserStatus={orderstatus}
           />
@@ -899,9 +903,11 @@ console.log('customerdata',customerData)
                   <div class="flex items-center">
                     <div
                       class={`${
-                        order.status === "COMPLETED"
-                          ? "bg-green-500"
-                          : "bg-red-500"
+                        order.status === "COMPLETED" ? "bg-green-500" 
+                        : order.status === "CONFIRMED" ? "bg-purple-300"
+                        : order.status === "PENDING" ? "bg-yellow-300" 
+                        : order.status === "CANCELLED" ? "bg-red-500" 
+                        : "bg-gray-500"
                       } h-2.5 w-2.5 rounded-full me-2`}
                     ></div>{" "}
                     {order.status}

@@ -143,6 +143,10 @@ async fetchCompletedOrders(chef_id) {
 
   async fetchCustomerOrders(customer_id){
     try {
+
+      if(!customer_id) return;
+    
+
       const response = await axios.get(`${API_BASE_URL}/orders/customer-orders/${customer_id}`);
       return response.data;
     } catch (error) {

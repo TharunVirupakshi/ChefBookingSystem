@@ -26,11 +26,41 @@ async function getFCMToken(id) {
     return await redisClient.get(`fcm_token_${id}`);
 }
 
+const updateChefLocation = async (chef_id, latitude, longitude) => {
+    const locationKey = `chef:location:${chef_id}`;
+    const locationData = JSON.stringify({ latitude, longitude });
+
+    try {
+        await redisClient.set(locationKey, locationData);
+        console.log(`✅ Chef ${chef_id} location saved: ${latitude}, ${longitude}`);
+    } catch (error) {
+        console.error(`❌ Error saving chef ${chef_id} location:`, error);
+        throw error;
+    }
+};
+
+const getChefLocation = async (chef_id) => {
+    try {
+        const res = await redisClient.get(`chef:location:${chef_id}`);
+        if (!res) {
+            throw new Error("Location not found");
+        }
+        return JSON.parse(res);
+    } catch (error) {
+        console.error(`Error fetching chef location: ${error.message}`);
+        return null; // or return a default location object if needed
+    }
+};
+
+
+
 module.exports = {
     acquireLock,
     releaseLock,
     updateChefStatus,
     getChefStatus,
     saveFCMToken,
-    getFCMToken
+    getFCMToken,
+    updateChefLocation,
+    getChefLocation
 };

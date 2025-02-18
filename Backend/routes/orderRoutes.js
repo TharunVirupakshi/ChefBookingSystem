@@ -916,15 +916,7 @@ router.post("/instant/response", async (req, res) => {
 
     // 3️⃣ Handle response: ACCEPT or REJECT
     if (response === "ACCEPT") {
-      requestData.status = "ACCEPTED";
-      // Extend TTL in Redis
-      const extendedTTL = 200; // Extend by 200 seconds
-      await redisClient.expire(activeRequestKey, extendedTTL);
-      await redisClient.setEx(
-        activeRequestKey,
-        30,
-        JSON.stringify(requestData)
-      );
+      
 
       const reqData = await redisClient.get(activeRequestKey);
       const reqDataJson = await JSON.parse(reqData)
@@ -986,6 +978,17 @@ router.post("/instant/response", async (req, res) => {
         }
 
         await client.query("COMMIT"); // Commit the transaction
+
+        requestData.status = "ACCEPTED";
+        // Extend TTL in Redis
+        const extendedTTL = 200; // Extend by 200 seconds
+        await redisClient.expire(activeRequestKey, extendedTTL);
+        await redisClient.setEx(
+          activeRequestKey,
+          30,
+          JSON.stringify(requestData)
+        );
+        
       } catch (err) {
         await client.query("ROLLBACK");
         throw err;

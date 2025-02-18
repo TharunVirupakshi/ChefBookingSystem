@@ -339,7 +339,7 @@ useEffect(() => {
          
 
           <div className="my-3">
-          <span className="text-red-600 text-xl font-semibold">Price: ₹{recipeData?.price}</span>
+          <span className="text-green-500 text-xl font-semibold">Price: ₹{recipeData?.price}</span>
           </div>
 
 

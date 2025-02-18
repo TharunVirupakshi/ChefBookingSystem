@@ -50,6 +50,7 @@ const ManageChefOrders = ({ chef_id }) => {
 
   const getLocName = async (lat, lng) => {
     try {
+      
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`
       );
@@ -453,9 +454,9 @@ const ManageChefOrders = ({ chef_id }) => {
   } catch (error) {
     console.error("❌ Unexpected error fetching orders:", error);
 
-    if (error.message !== "No orders found") {
-      toast.error("An error occurred while fetching orders.");
-    }
+    // if (error.message !== "No orders found") {
+    //   toast.error("An error occurred while fetching orders.");
+    // }
 
     setOrderData(null);
   }
@@ -618,7 +619,7 @@ const ManageChefOrders = ({ chef_id }) => {
           {status === "READY" ? "BUSY" : "READY"}
         </button>
       </div>
-      <h3>Current Status: {status ? status : "Not Set"}</h3>
+      <h3>Current Status: <span className={`${status === "READY" ? "text-green-500" : status === "BUSY" ? "text-red-500" : ""}`}>{status ? status : "Not Set"}</span></h3>
 
       <div className="py-5 flex gap-2">
         {instantBookingNotification ? (
@@ -693,15 +694,18 @@ export default ManageChefOrders;
 
 const Table = ({ completedOrders = [], completedRecipes = [] }) => {
   const [customerData,setCustomerData] = useState([]);
+  const [currentOrder, setCurrentOrder] = useState(null);
 
-
-  const handleView =  async (customerId) => {
-    if (!customerId) return;
-    const result = await APIService.getCustomerById(customerId);
+  const handleView =  async (order) => {
+    
+    setCurrentOrder(order)
+    const result = await APIService.getCustomerById(order?.customer_id);
     if (result) {
       setCustomerData(result)
     }
   }
+
+  
 
 console.log('customerdata',customerData)
 
@@ -885,7 +889,7 @@ console.log('customerdata',customerData)
                   {
                     // Combine today's date with the provided time string and format it
                     (() => {
-                      const timeString = order.end_date_time; // Assuming order.end_date_time is in the format "11:55:26.300822"
+                      const timeString = order?.end_date_time; // Assuming order.end_date_time is in the format "11:55:26.300822"
                       const today = new Date(); // Get today's date
 
                       // Combine the current date with the time string
@@ -898,7 +902,7 @@ console.log('customerdata',customerData)
                     })()
                   }
                 </td>
-                <td class="px-6 py-4">{order.type}</td>
+                <td class="px-6 py-4">{order?.type}</td>
                 <td class="px-6 py-4">
                   <div class="flex items-center">
                     <div
@@ -910,7 +914,7 @@ console.log('customerdata',customerData)
                         : "bg-gray-500"
                       } h-2.5 w-2.5 rounded-full me-2`}
                     ></div>{" "}
-                    {order.status}
+                    {order?.status}
                     {/* <div class="h-2.5 w-2.5 rounded-full bg-yellow-300 me-2"></div> Pending */}
                     {/* <div class="h-2.5 w-2.5 rounded-full bg-red-500 me-2"></div> Cancelled */}
                   </div>
@@ -922,7 +926,7 @@ console.log('customerdata',customerData)
                     data-modal-target="editUserModal"
                     data-modal-show="editUserModal"
                     class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                    onClick={()=>handleView(order.customer_id)}
+                    onClick={()=>handleView(order)}
                   >
                     View
                   </a>
@@ -971,22 +975,43 @@ console.log('customerdata',customerData)
 
             <div class="p-6 space-y-6">
               <div class="grid grid-cols-6 gap-6">
+              <div class="col-span-6 sm:col-span-3">
+                  <label
+                    for="phone-number"
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    Order ID
+                  </label>
+                  {currentOrder?.order_id}
+                </div>
+                <div class="col-span-6 sm:col-span-3">
+                  <label
+                    for="address"
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                   Recipe
+                  </label>
+                  {/* <input
+                   value={customerData.address || "N/A"}
+                    type="text"
+                    name="address"
+                    id="address"
+                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    placeholder="address"
+                    readOnly
+                  /> */}
+                  <p>{currentOrder?.title || ""}</p>
+                </div>
+
+
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="customer-fullname"
                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                   >
-                    Customer FullName
+                    Customer Name
                   </label>
-                  <input
-                    type="text"
-                    name="first-name"
-                    id="first-name"
-                    value={customerData.full_name || ""}
-                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="Bonnie"
-                    readOnly
-                  />
+                  <p>{customerData.full_name}</p>
                 </div>
                
                
@@ -997,62 +1022,91 @@ console.log('customerdata',customerData)
                   >
                     Email
                   </label>
-                  <input
-                  value={customerData.email || ""}
-                    type="email"
-                    name="email"
-                    id="email"
-                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="example@company.com"
-                    readOnly
-                  />
+                  <p>{customerData.email}</p>
                 </div>
 
                 <div class="col-span-6 sm:col-span-3">
                   <label
-                    for="phone-number"
+                    for="email"
                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                   >
-                    Phone Number
+                    Price
                   </label>
-                  <input
-                   value={customerData.phone_number || "N/A"}
-                    type="text"
-                    name="phone-number"
-                    id="phone-number"
-                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                   readOnly
-                  />
+                  <p>{currentOrder?.price}</p>
                 </div>
+
                 <div class="col-span-6 sm:col-span-3">
                   <label
-                    for="address"
+                    for="email"
                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
                   >
-                   Address
+                    Type
                   </label>
-                  <input
-                   value={customerData.address || "N/A"}
-                    type="text"
-                    name="address"
-                    id="address"
-                    class="shadow-xs bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-600 focus:border-blue-600 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                    placeholder="address"
-                    readOnly
-                  />
+                  <p>{currentOrder?.booking_type}</p>
                 </div>
+
+                <div class="col-span-6 sm:col-span-3">
+                  <label
+                    for="email"
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    Date
+                  </label>
+                  <p>{new Date(currentOrder?.order_date).toLocaleDateString()}</p>
+                </div>
+
+                <div class="col-span-6 sm:col-span-3">
+                  <label
+                    for="email"
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    STATUS
+                  </label>
+                  <div
+                      class={`${
+                        currentOrder?.status === "COMPLETED" ? "bg-green-500" 
+                        : currentOrder?.status === "CONFIRMED" ? "bg-purple-300"
+                        : currentOrder?.status === "PENDING" ? "bg-yellow-300" 
+                        : currentOrder?.status === "CANCELLED" ? "bg-red-500" 
+                        : "bg-gray-500"
+                      } h-2.5 w-2.5 rounded-full me-2 inline-block`}
+                    ></div>{" "}
+                    {currentOrder?.status}
+                </div>
+
+                <div class="col-span-6 sm:col-span-3">
+                  <label
+                    for="email"
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    Start Date Time
+                  </label>
+                  <p>{new Date(currentOrder?.start_date_time).toLocaleString()}</p>
+                </div>
+
+                <div class="col-span-6 sm:col-span-3">
+                  <label
+                    for="email"
+                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                  >
+                    End Date Time
+                  </label>
+                  <p>{new Date(currentOrder?.end_date_time).toLocaleString()}</p>
+                </div>
+
+               
                 
               </div>
             </div>
 
-            <div class="flex items-center p-6 space-x-3 rtl:space-x-reverse border-t border-gray-200 rounded-b dark:border-gray-600">
+            {/* <div class="flex items-center p-6 space-x-3 rtl:space-x-reverse border-t border-gray-200 rounded-b dark:border-gray-600">
               <button
                 type="submit"
                 class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
               >
                 Save all
               </button>
-            </div>
+            </div> */}
           </form>
         </div>
       </div>

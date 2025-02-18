@@ -5,7 +5,9 @@ import { useLocation } from 'react-router-dom';
 import useReverseGeocode from '../../../Hooks/useReverseGeocode';
 import RecipeStatusCard from '../../../components/RecipeStatusCard/RecipeStatusCard';
 import { initFlowbite } from 'flowbite';
-
+import axios from 'axios';
+import { auth } from '../../../Firebase/firebase';
+import RiderGIF from '../../../assets/rider.gif'
 function OrderPage({customer_id}) {
   const {notifications} = useNotification();
   const location = useLocation();
@@ -19,7 +21,7 @@ function OrderPage({customer_id}) {
   const [recipeid,setRecipeId] = useState(null);
   const [latestAcceptedBooking, setLatestAcceptedBooking] = useState(null);
   const locationName = useReverseGeocode(latitude, longitude);
-
+  const [userGeolocation, setUserGeolocation] = useState({ lat: 0, long: 0 });
 
   console.log('customerid in orderpage',customer_id)
 
@@ -54,21 +56,124 @@ function OrderPage({customer_id}) {
     }
   }, [notifications]);
 
+  const fetchLocation = () => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject("Geolocation is not supported by this browser!");
+        return;
+      }
   
-  useEffect(() => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const loc = {
+            lat: pos.coords.latitude,
+            long: pos.coords.longitude,
+          };
+          console.log("User location:", loc);
+          resolve(loc); // Resolve the promise with the location
+        },
+        (error) => {
+          console.error("❌ Geolocation error:", error.message);
+          reject("Failed to get location.");
+        }
+      );
+    });
+  };
+
+  const getUserLocation = async () => {
+    try {
+      const location = await fetchLocation();
+      console.log("Location fetched:", location);
+      return location
+    } catch (error) {
+      console.error("Error fetching location:", error);
+      return null
+    }
+  };
+ 
+  
+
+  // useEffect(() => {
+    
+  //  const loc =  fetchLocation(); // Fetch the location when the component mounts
+  //  if(!loc) setUserGeolocation(loc)
+  // }, []);
+  
+
+//   console.log("completed orders..", orders);
+//   console.log("completed recipes..", recipes);
+// console.log('latest accepted booking',latestAcceptedBooking)
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_JS_API_KEY;
+const getChefETA = async (chef_id, user_loc) => {
+  try {
+      if (!user_loc) throw new Error('User location not found');
+
+      // Prepare the request body
+      const requestData = {
+        chef_id,
+        user_lat: user_loc.lat,
+        user_long: user_loc.long
+      };
+
+      // Fetch ETA from the backend server using axios
+       const chefRes = await axios.get('http://localhost:3000/api/chefs/get-eta', {
+        params: requestData
+      });
+
+      // Check if the response is successful
+      if (!chefRes.data.success) throw new Error(chefRes.data.message || 'Failed to fetch ETA from backend');
+      
+      return { success: true, eta: chefRes.data.eta, dist: chefRes.data.dist };
+
+  } catch (error) {
+      console.error('Error fetching ETA:', error);
+      return { success: false, message: error.message || 'Failed to calculate ETA' };
+  }
+};
+;
+
+useEffect(() => {
   const fetchPastOrdersAndRecipes = async () => {
     try {
       // Fetch all customer orders
-      const orders = await APIService.fetchCustomerOrders(customer_id);
+      
+      const orders = await APIService.fetchCustomerOrders(auth.currentUser.uid);
       setOrders(orders); // Store all orders
 
       if (orders.length === 0) return;
 
       // Filter pending orders
       const pendingOrders = orders.filter(order => order.status === "PENDING" || order.status === "CONFIRMED");
-      setActiveOrders(pendingOrders); // Store pending orders separately
+      
+      const loc = await getUserLocation()
+      console.log("User loc: ", loc)
+      // Fetch ETA for each order and update state
 
-      console.log("ACTIVE ORDERS: ", pendingOrders)
+
+      const updatedActiveOrders = await Promise.all(
+        pendingOrders.map(async (order) => {
+          let eta = 'Unavailable'; // Default value
+          let dist = 'Unavailable';
+          if (order?.chef_id && loc) {
+            const etaResponse = await getChefETA(order.chef_id, loc);
+            if (etaResponse.success) {
+              eta = etaResponse.eta;
+              dist = etaResponse.dist
+            }
+          }
+
+          // Return the order with the added ETA field
+          return {
+            ...order,
+            eta, // Add the ETA field to the order
+            dist
+          };
+        })
+      );
+      console.log("Updated orders: ", updatedActiveOrders)
+      
+      setActiveOrders(updatedActiveOrders); // Store pending orders separately
+      console.log("ACTIVE ORDERS: ",updatedActiveOrders)
       // // Fetch recipes for each order
       // const recipePromises = orders.map(order =>
       //   APIService.fetchRecipesByRecipeId(order.recipe_id)
@@ -83,12 +188,7 @@ function OrderPage({customer_id}) {
   };
 
   fetchPastOrdersAndRecipes();
-}, [customer_id]);
-
-//   console.log("completed orders..", orders);
-//   console.log("completed recipes..", recipes);
-// console.log('latest accepted booking',latestAcceptedBooking)
-
+}, []);
 
 
 
@@ -116,7 +216,17 @@ function OrderPage({customer_id}) {
                 locationName={""}
                 title={order?.title}
               />
-              <div className="w-full border rounded-lg overflow-hidden">
+              <div className="w-full border rounded-lg text-center overflow-hidden flex flex-col justify-center items-center">
+              
+              
+              
+              <div className="h-32 aspect-square">
+                <img className='w-full h-full object-cover' src={RiderGIF}/>
+              </div>
+                <p className='font-semibold text-xl'>ETA: {order.eta || ""}</p>
+                <p>{order.dist !== "Unavailable" && `Your chef is ${order.dist} away.` }</p>
+              
+                
                 {/* <MapsCard
                 latitude={parseFloat(instantBookingNotification.data.latitude) || 12.9716}
                 longitude={parseFloat(instantBookingNotification.data.longitude) || 77.5946}
@@ -347,7 +457,13 @@ console.log('chefData',chefData)
                 <td class="px-6 py-4">{order.type}</td>
                 <td class="px-6 py-4">
                   <div class="flex items-center">
-                    <div class={`${order.status === "COMPLETED" ?  "bg-green-500" : "bg-red-500"} h-2.5 w-2.5 rounded-full me-2`}></div>{" "}
+                    <div class={`${
+                        order.status === "COMPLETED" ? "bg-green-500" 
+                        : order.status === "CONFIRMED" ? "bg-purple-300"
+                        : order.status === "PENDING" ? "bg-yellow-300" 
+                        : order.status === "CANCELLED" ? "bg-red-500" 
+                        : "bg-gray-500"
+                      } h-2.5 w-2.5 rounded-full me-2`}></div>{" "}
                     {order.status}
                     {/* <div class="h-2.5 w-2.5 rounded-full bg-yellow-300 me-2"></div> Pending */}
                     {/* <div class="h-2.5 w-2.5 rounded-full bg-red-500 me-2"></div> Cancelled */}

@@ -7,16 +7,18 @@ function RecipeCard({title,price,imageurl,handleBookNow = ()=>{} }) {
     initFlowbite();
   }, []);
 
- imageurl = recipe
+
 
   return (
     <div className="w-full max-w-sm bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
       <a href="#">
+       <div className="aspect-square rounded-lg overflow-hidden">
         <img
-          className="p-8 rounded-t-lg"
+          className="block p-8 rounded-t-lg w-full h-full object-cover"
           src={imageurl}
           alt="product image"
         />
+       </div>
       </a>
       <div className="px-5 pb-5">
         <a href="#">

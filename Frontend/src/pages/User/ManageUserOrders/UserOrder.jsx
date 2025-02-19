@@ -8,6 +8,7 @@ import { auth } from "../../../Firebase/firebase";
 import { useAuth } from "../../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import APIService from "../../../API/APIService";
+import getImgUrl from "../../../utils/images";
 
 const UserOrder = () => {
   const { user, loading } = useAuth();
@@ -207,7 +208,9 @@ useEffect(() => {
       console.error("Error placing order:", error);
       toast.error(error?.message || "An error occurred. Please try again.");
     }
-  };
+  }
+
+  const imgUrl = getImgUrl(recipeData?.recipe_id ?? -1);
 
 
   return (
@@ -288,9 +291,10 @@ useEffect(() => {
     <div className="p-14 w-screen">
       <div className="flex flex-wrap  items-center gap-10">
     
-        <div className="flex-2">
-          <img src={recipe} alt="recipe image" width={300} height={300} />
+        <div className="flex-2 w-72 h-96">
+          <img src={imgUrl} alt="recipe image" className="w-full h-full object-cover"/>
         </div>
+
         <div className="flex-1">
           <span className="text-3xl font-semibold text-slate-600">
             {recipeData?.title}

@@ -256,23 +256,34 @@ router.get("/customer-orders/:customer_id", async (req, res) => {
 /*
     Create order (Instant Booking) (Only one req can reach the chef)
     - Check in Redis if the chef is READY (READY - Accepting orders, BUSY)
-    - Check in Redis if the chef is already locked/reserved (lock with TTL) 
+    - Check in Redis if the chef is already locked/reserved (lock with TTL)
+    - Acquire the Lock (60s contention period) 
     - If not, then go ahead and start a serializable transaction.
-        - Check the chef_status table "instant_book" field, and proceed only if it's AVAILABLE.
-        - Put a lock in the Redis. 
-        - Check the chef_sched table (advnc bookings) of the chef. See if its safe for booking, if yes
-          mark the chef_status table "instant_book" field as PENDING (as it is required approval from chef)
-          and send a req to chef (Notification).
-        - If chef accepts, mark the chef's "instant_book" field as BOOKED.
-          Automatically update chef's status in redis to BUSY.
+        - Check the chef_status table "instant_book" field, and proceed only if it's AVAILABLE/COMPLETED.
+        - Check the chef_sched table (advnc bookings) of the chef. See if its safe for booking, if yes then
+          insert a instant_req (with 1min + 30s(buffer) TTL) in the redis, send a notif for chef.
+        - User receives SSE based status (Time remaining and status) directly from the redis
+        - If chef accepts, insert an order into orders table, change the chef_status table to PENDING along with order_id
+          Then update the same in instant_req in redis, (User will be receiving updates on this instant_req via SSE)
         
     Create order (Advanced Booking) (Multiple reqs can reach chef)
     - Check the chef's schedule (advnc bokings) and see if there are conflicting bookings.
     - Two requests (conflicting with each other) can see that there is no conflicting bookings in the sched and send the req to chef.
-    - Since it is approval based, chef can see what's conflicting and choose either of them.
+    - Since it is approval based, chef can see what's conflicting and choose either of them !!!
     - Before approving a booking, it will be again checked against the schedule for conflicts.
     - Once approved, the other conflicting req won't be allowed and optionally show that chef cannot approve those reqs.
 
+
+    CONFLICT CHECKING LOGIC
+    - INSTANT BOOKING:
+      - (Chef ETA to User Loc + 
+         Recipe Prep Time + 
+         Chef ETA to his upcoming Advnc Booking loc + 
+         Buffer) + cur_time < Upcoming AdvBooking time ==> Chef can accept.
+      - Else WARN the chef that its CONFLICTING and advice to change his status to BUSY so no more reqs are rcvd (or don't allow)
+    
+    - ADVNCD BOOKING:
+      - 
 
 
 */
@@ -495,7 +506,7 @@ router.put("/update-instant-book", async (req, res) => {
 });
 
 
-
+// MAKE A INSTANT ORDER REQUEST
 router.post("/instant", async (req, res) => {
   const { error, value } = instantBookingSchema.validate(req.body);
   if (error) {
@@ -549,11 +560,12 @@ router.post("/instant", async (req, res) => {
       }
     }
 
-      // 2️⃣ Acquire Redis Lock to prevent concurrent requests
+      // 2️⃣ Acquire Redis Lock to prevent concurrent requests, contention window
       const lockAcquired = await redisService.acquireLock(
         `chef_lock_${chef_id}`,
         60
       );
+      
       if (!lockAcquired) {
         return res.status(400).json({
           success: false,

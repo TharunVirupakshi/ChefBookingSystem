@@ -2,6 +2,9 @@ import React, { useState } from 'react'
 import { useEffect } from 'react';
 import RecipeCard from '../components/RecipeCard/RecipeCard';
 import { Outlet, useNavigate } from 'react-router-dom';
+import { string } from 'yup';
+import getImgUrl from '../utils/images';
+
 
 
 
@@ -30,15 +33,13 @@ function HomePage () {
   }
 };
 
-
-
-
 const handleBookNow = (recipe_id,chef_id)=>{
     navigate(`/recipe/${recipe_id}`,{
         state: { chef_id } 
     });
    
 }
+
 
 
 
@@ -55,7 +56,7 @@ fetchReciepes()
             <RecipeCard 
                 title={recipe.title}
                 price={recipe.price}
-                imageurl={recipe.image_url}
+                imageurl={getImgUrl(recipe.recipe_id)}
                 handleBookNow={()=>handleBookNow(recipe.recipe_id,recipe.chef_id)}
             />
             </ul>

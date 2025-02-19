@@ -223,6 +223,7 @@ router.post('/signup', async(req, res)=>{
     const userCredential = await admin.auth().createUser({email,password,displayName: name});
 
     await admin.auth().updateUser(userCredential.uid, {displayName: name})
+    // JWT TOKEN UPDATE
     await admin.auth().setCustomUserClaims(userCredential.uid, {chef:true})
     
 

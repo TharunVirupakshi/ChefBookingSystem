@@ -32,6 +32,7 @@ function OrderPage({customer_id}) {
   }, [location.state?.status]);
 
   useEffect(()=>{
+    console.log("Init flowbite")
     initFlowbite();
   },[])
 
@@ -220,9 +221,9 @@ useEffect(() => {
               
               
               
-              <div className="h-32 aspect-square">
+              {order.dist !== "Unavailable"  && <div className="h-32 aspect-square">
                 <img className='w-full h-full object-cover' src={RiderGIF}/>
-              </div>
+              </div>}
                 <p className='font-semibold text-xl'>ETA: {order.eta || ""}</p>
                 <p>{order.dist !== "Unavailable" && `Your chef is ${order.dist} away.` }</p>
               

@@ -935,8 +935,11 @@ router.post('/advance', async(req, res) => {
 
   try{
 
+    console.log("\nADVANCE BOOKING--------------")
+
    // Ensure start_date is in the future
    const curOrderStart = new Date(start_date);
+   console.log("CurOrderStart: ", curOrderStart.toLocaleString());
    if (curOrderStart <= new Date()) {
      return res.status(400).json({ success: false, message: "Booking date must be in the future." });
    }
@@ -944,7 +947,7 @@ router.post('/advance', async(req, res) => {
 
     // Validate if recipe belongs to chef
     const recipeResult = await client.query(
-      `SELECT title 
+      `SELECT * 
              FROM recipe 
              WHERE recipe_id = $1 AND chef_id = $2 
              LIMIT 1`, // Explicitly limit to 1 for safety
@@ -959,10 +962,15 @@ router.post('/advance', async(req, res) => {
     }
 
     const recipe = recipeResult.rows[0];
+    const prepTime = Number(recipe.preparation_time);
+    if (isNaN(prepTime)) {
+      throw new Error("Invalid preparation_time");
+    }
 
     // Calculate current order's end time based on preparation_time
-    const curOrderEnd = new Date(curOrderStart.getTime() + recipe.preparation_time * 60000);
-
+     const curOrderEnd = new Date(curOrderStart.getTime() + prepTime * 60000);
+     const curOrderDurationMs = curOrderEnd.getTime() - curOrderStart.getTime();
+    console.log("CurOrderEnd: ", curOrderEnd.toLocaleString(),"\nDuration: ", curOrderDurationMs/60000)
     // Define a fixed buffer time in minutes (could be made dynamic)
     const bufferTime = 30;
 
@@ -971,8 +979,8 @@ router.post('/advance', async(req, res) => {
       `SELECT * FROM orders 
       WHERE chef_id = $1 
         AND status = 'CONFIRMED' 
-        AND end_date_time <= $2 
         AND DATE(end_date_time) = DATE($2)
+        AND end_date_time <= $2 
       ORDER BY end_date_time DESC LIMIT 1`,
       [chef_id, curOrderStart]
     );
@@ -984,9 +992,9 @@ router.post('/advance', async(req, res) => {
       `SELECT * FROM orders 
       WHERE chef_id = $1 
         AND status = 'CONFIRMED' 
-        AND start_date >= $2 
-        AND DATE(start_date) = DATE($2)
-      ORDER BY start_date ASC LIMIT 1`,
+        AND start_date_time >= $2 
+        AND DATE(start_date_time) = DATE($2)
+      ORDER BY start_date_time ASC LIMIT 1`,
       [chef_id, curOrderStart]
     );
     const nextOrder = nextOrderResult.rowCount > 0 ? nextOrderResult.rows[0] : null;
@@ -997,19 +1005,31 @@ router.post('/advance', async(req, res) => {
 
     // Head Clash Check: If there is a previous order, determine the earliest start allowed.
     if (prevOrder) {
+
+      console.log("Previous order id: ", prevOrder?.order_id || "N/A")
+
       const departureDate = new Date(prevOrder.end_date_time);
       const originLoc = { lat: prevOrder.latitude, long: prevOrder.longitude };
       const headETA = await getETA(originLoc, { lat: latitude, long: longitude }, departureDate);
       // startLimit = previous order's end + ETA + buffer
-      startLimit = new Date(departureDate.getTime() + (headETA + bufferTime) * 60000);
+      startLimit = new Date(departureDate.getTime() + (headETA) * 60000);
+
+      console.log("PrevOrder ETA(mins): ", headETA, " startLimit: ", startLimit.toLocaleString())
+      
     }
 
     // Tail Clash Check: If there is a next order, determine the latest end allowed.
     if (nextOrder) {
+
+      console.log("Next order id: ", nextOrder.order_id)
+
       const destLoc = { lat: nextOrder.latitude, long: nextOrder.longitude };
       const tailETA = await getETA({ lat: latitude, long: longitude }, destLoc, curOrderEnd);
       // endLimit = next order's start - (ETA + buffer)
-      endLimit = new Date(new Date(nextOrder.start_date).getTime() - (tailETA + bufferTime) * 60000);
+      const nextOrderStart = new Date(nextOrder.start_date_time)
+      endLimit = new Date(nextOrderStart.getTime() -  tailETA * 60000);
+
+      console.log("NextOrder ETA(mins): ", tailETA, "\nNextOrder Start: ",nextOrderStart.toLocaleString(),"\nendLimit: ", endLimit.toLocaleString())
     }
 
 
@@ -1021,7 +1041,7 @@ router.post('/advance', async(req, res) => {
    // Ensure that the order is possible to fit within the gap
    if(startLimit && endLimit){
       const availableGapMs = endLimit.getTime() - startLimit.getTime();
-      const curOrderDurationMs = curOrderEnd.getTime() - curOrderStart.getTime();
+      
       const diffMs = availableGapMs - curOrderDurationMs;
 
       if(diffMs < -acceptableOverlapMs){
@@ -1033,15 +1053,35 @@ router.post('/advance', async(req, res) => {
    }
 
    // Nudge the order start_date to adjust if necessary
-   if((startLimit && curOrderStart < startLimit) || (endLimit && curOrderEnd > endLimit)){ // HEAD CLASH
+   if(startLimit && curOrderStart < startLimit){ // HEAD CLASH
+    const date = startLimit
+    console.log("HEAD COLLISION - Suggested Start: ", date.toLocaleString())
     return res.status(409).json({
       success: false,
-      message: `Booking collision: Suggested new start_date is ${startLimit.toISOString()}`
+      message: `Booking collision (HEAD): Suggested new start_date is ${date.toLocaleString()}`
     });
+  }else if(endLimit && curOrderEnd > endLimit){
+    
+    const date = startLimit ? startLimit : new Date(endLimit.getTime() - curOrderDurationMs)
+    console.log("TAIL COLLISION - Suggested Start: ", date.toLocaleString())
+    return res.status(409).json({
+      success: false,
+      message: `Booking collision (TAIL): Suggested new start_date is ${date.toLocaleString()}`
+    }); 
    }
 
+   const orderResult = await client.query(
+    `INSERT INTO orders (
+        customer_id, chef_id, recipe_id, total_price, status, type,
+        start_date_time, end_date_time, latitude, longitude, chef_latitude, chef_longitude
+     )
+     VALUES ($1, $2, $3, $4, 'PENDING', 'ADVANCE', $5, $6, $7, $8, null, null)
+     RETURNING order_id`,
+    [customer_id, chef_id, recipe_id, recipe.price, start_date, curOrderEnd, latitude, longitude]
+  );
+
   
-   
+  
    
    return res.status(200).json({
     success: true,
@@ -1066,13 +1106,16 @@ const getETA = async (origin, destination, departureDate) => {
   const departureTimeSec = Math.floor(new Date(departureDate));
   const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin.lat},${origin.long}&destinations=${destination.lat},${destination.long}&departure_time=${departureTimeSec}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
   
-  const response = await axios.get(url);
-  const element = response.data.rows[0].elements[0];
-  if (element.status !== 'OK') {
-    throw new Error('Failed to retrieve travel time.');
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch data from Google Distance Matrix API');
   }
+
+  const data = await response.json(); 
+  console.log("ETA response: ",data)
   // Convert seconds to minutes.
-  return element.duration.value / 60;
+  return data.rows[0].elements[0].duration.value / 60;
 };
 
 

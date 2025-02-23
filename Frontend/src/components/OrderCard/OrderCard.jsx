@@ -2,25 +2,35 @@
 import React, { useEffect } from 'react'
 import { Card, Dropdown } from "flowbite-react";
 import recipe from '../../../src/assets/sandwich.jpg'
+import getImgUrl from '../../utils/images';
 
 
-const InstantOrderCard = ({ active,timeRemaining, location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{}, onComplete=()=>{}, onCancel=()=>{},UserStatus}) => {
+const OrderCard = ({ active,timeRemaining, location, imageUrl, title, onAccept = ()=>{}, onReject = ()=>{}, onComplete=()=>{}, onCancel=()=>{},UserStatus, startTime, endTime,date, type}) => {
  console.log('active',active)
  const isCancelled = UserStatus === "CANCELLED";
 
   return (
     <>
       <Card className="max-w-lg p-2">
+      {type === 'ADVANCE' && (
+        <div className='bg-purple-600 text-white font-light text-sm rounded-lg text-center w-fit p-1 px-2'>ADVANCE</div>
+      )}
+      {type === 'INSTANT' && (
+        <div className='bg-green-500 text-white font-light text-sm rounded-lg text-center w-fit p-1 px-2'>INSTANT</div>
+      )}
       <span className={`${isCancelled ? "text-red-500" : "text-green-500"}`}>
       {isCancelled && "User Cancelled"}
         </span>
         <div className="flex flex-col items-center">
-       
-          <img
-            alt="Bonnie image"
-            src={recipe}
-            className="mb-3 rounded-full aspect-square w-40 shadow-lg"
-          />
+
+          <div className='w-40 aspect-square rounded-full overflow-hidden'>
+            <img
+              alt="Bonnie image"
+              src={imageUrl ?? ""}
+              className="w-full object-cover"
+            />
+          </div>
+          
           <div className='text-center w-[250px]'>
           <h5 className="mb-1 text-xl font-medium text-gray-900 dark:text-white">
             {title}
@@ -45,6 +55,10 @@ const InstantOrderCard = ({ active,timeRemaining, location, imageUrl, title, onA
             <br></br>
             {location}
           </span>
+          </div>
+          <div className='text-center'>
+          <p>{date}</p>
+          <p>{startTime} - {endTime}</p>
           </div>
           <div className="mt-4 flex space-x-3 lg:mt-6">
           {active ? (
@@ -96,4 +110,4 @@ const InstantOrderCard = ({ active,timeRemaining, location, imageUrl, title, onA
   );
 }
 
-export default InstantOrderCard
+export default OrderCard

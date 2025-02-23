@@ -19,6 +19,44 @@ router.get("/", async (req, res) => {
   }
 });
 
+
+// Endpoint to fetch blocked dates (time slots) for a chef on a given date
+router.get('/blocked-dates', async (req, res) => {
+  const { chef_id, date } = req.query;
+
+  if (!chef_id || !date) {
+    return res.status(400).json({
+      success: false,
+      message: 'chef_id and date are required. (date should be in YYYY-MM-DD format)'
+    });
+  }
+
+  try {
+    // Query orders for the chef on the given day using DATE() function in PostgreSQL.
+    const result = await client.query(
+      `SELECT order_id, type, start_date_time, end_date_time 
+       FROM orders 
+       WHERE chef_id = $1 
+         AND DATE(start_date_time) = DATE($2)
+         AND (( type = 'INSTANT' AND status = 'PENDING') OR (type = 'ADVANCE' AND status = 'CONFIRMED'))
+       ORDER BY start_date_time ASC`,
+      [chef_id, date]
+    );
+
+    return res.status(200).json({
+      success: true,
+      blockedDates: result.rows
+    });
+  } catch (error) {
+    console.error("Error fetching blocked dates:", error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+});
+
+
 router.get("/:chef_id", async (req, res) => {
   const { chef_id } = req.params;
 
@@ -912,6 +950,184 @@ router.post("/instant/response", async (req, res) => {
   }
 });
 
+
+
+router.post("/advance/complete", async (req, res) => {
+  const { order_id } = req.query;
+
+  if (!order_id) {
+    return res.status(400).json({ success: false, message: "order_id is required" });
+  }
+
+  try {
+    // Retrieve the pending order
+    const orderResult = await client.query(
+      `SELECT * FROM orders WHERE order_id = $1 AND status = 'CONFIRMED' LIMIT 1`,
+      [order_id]
+    );
+    
+    if (orderResult.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Order not found or not in a CONFIRMED state." });
+    }
+    
+    // Update the order status to CONFIRMED
+    const updateResult = await client.query(
+      `UPDATE orders 
+       SET status = 'COMPLETED'
+       WHERE order_id = $1 
+       RETURNING *`,
+      [order_id]
+    );
+    
+    // Optionally, you can trigger notifications here (e.g., using FCM)
+    // await sendFCMNotification(...);
+
+    return res.status(200).json({
+      success: true,
+      message: "Order has been completed successfully.",
+      order: updateResult.rows[0]
+    });
+  } catch (error) {
+    console.error("Error completing advance booking: ", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
+  }
+});
+
+router.post("/advance/cancel", async (req, res) => {
+  const { order_id } = req.query;
+
+  if (!order_id) {
+    return res.status(400).json({ success: false, message: "order_id is required" });
+  }
+
+  try {
+    // Retrieve the pending order
+    const orderResult = await client.query(
+      `SELECT * FROM orders WHERE order_id = $1 AND status = 'CONFIRMED' LIMIT 1`,
+      [order_id]
+    );
+    
+    if (orderResult.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Order not found or not in a CONFIRMED state." });
+    }
+    
+    // Update the order status to CONFIRMED
+    const updateResult = await client.query(
+      `UPDATE orders 
+       SET status = 'CANCELLED'
+       WHERE order_id = $1 
+       RETURNING *`,
+      [order_id]
+    );
+    
+    // Optionally, you can trigger notifications here (e.g., using FCM)
+    // await sendFCMNotification(...);
+
+    return res.status(200).json({
+      success: true,
+      message: "Order has been cancelled successfully.",
+      order: updateResult.rows[0]
+    });
+  } catch (error) {
+    console.error("Error cancelling advance booking: ", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
+  }
+});
+
+router.post("/advance/request/accept", async (req, res) => {
+  const { order_id } = req.query;
+
+  if (!order_id) {
+    return res.status(400).json({ success: false, message: "order_id is required" });
+  }
+
+  try {
+    // Retrieve the pending order
+    const orderResult = await client.query(
+      `SELECT * FROM orders WHERE order_id = $1 AND status = 'PENDING' LIMIT 1`,
+      [order_id]
+    );
+    
+    if (orderResult.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Order not found or not in a PENDING state." });
+    }
+    
+    // Update the order status to CONFIRMED
+    const updateResult = await client.query(
+      `UPDATE orders 
+       SET status = 'CONFIRMED'
+       WHERE order_id = $1 
+       RETURNING *`,
+      [order_id]
+    );
+    
+    // Optionally, you can trigger notifications here (e.g., using FCM)
+    // await sendFCMNotification(...);
+
+    return res.status(200).json({
+      success: true,
+      message: "Order has been accepted successfully.",
+      order: updateResult.rows[0]
+    });
+  } catch (error) {
+    console.error("Error accepting advance booking: ", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
+  }
+});
+router.post("/advance/request/reject", async (req, res) => {
+  const { order_id } = req.query;
+
+  if (!order_id) {
+    return res.status(400).json({ success: false, message: "order_id is required" });
+  }
+
+  try {
+    // Retrieve the pending order
+    const orderResult = await client.query(
+      `SELECT * FROM orders WHERE order_id = $1 AND status = 'PENDING' LIMIT 1`,
+      [order_id]
+    );
+    
+    if (orderResult.rowCount === 0) {
+      return res.status(404).json({ success: false, message: "Order not found or not in a PENDING state." });
+    }
+    
+    // Update the order status to CONFIRMED
+    const updateResult = await client.query(
+      `UPDATE orders 
+       SET status = 'REJECTED'
+       WHERE order_id = $1 
+       RETURNING *`,
+      [order_id]
+    );
+    
+    // Optionally, you can trigger notifications here (e.g., using FCM)
+    // await sendFCMNotification(...);
+
+    return res.status(200).json({
+      success: true,
+      message: "Order has been rejected successfully.",
+      order: updateResult.rows[0]
+    });
+  } catch (error) {
+    console.error("Error rejecting advance booking: ", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
+  }
+});
+
+
 // Advanced booking logic
 const advanceBookingSchema = Joi.object({
   chef_id: Joi.string().required(),
@@ -989,7 +1205,7 @@ router.post('/advance', async(req, res) => {
   const prevDirecCollisionOrder = prevOrderDirectCollisionResult.rowCount > 0 ? prevOrderDirectCollisionResult.rows[0] : null;
   
   if(prevDirecCollisionOrder){
-    console.log("DIRECT COLLISION with prev order: ", prevDirecCollisionOrder.order_id)
+    console.log("DIRECT COLLISION with PREV order: ", prevDirecCollisionOrder.order_id)
     return res.status(409).json({
       success: false,
       message: "Booking collision: Cannot accommodate the booking. [Direct Collison with PREV ORDER]. Suggested Start after: "+prevDirecCollisionOrder.end_date_time
@@ -1008,7 +1224,7 @@ router.post('/advance', async(req, res) => {
    
   const nextDirectCollisionOrder = nextOrderDirectCollisionResult.rowCount > 0 ? nextOrderDirectCollisionResult.rows[0] : null;
   if(nextDirectCollisionOrder){
-    console.log("DIRECT COLLISION with prev order: ", nextDirectCollisionOrder.order_id)
+    console.log("DIRECT COLLISION with NEXT order: ", nextDirectCollisionOrder.order_id)
     const suggestedStartTime = new Date(new Date(nextDirectCollisionOrder.start_date_time).getTime() - curOrderDurationMs);
     return res.status(409).json({
       success: false,

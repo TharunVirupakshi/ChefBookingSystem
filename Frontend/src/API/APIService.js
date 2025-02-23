@@ -203,8 +203,50 @@ async cancelInstantBooking(chef_id) {
     }
   },
 
-
-
+  async confirmAdvanceBooking(order_id) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/orders/advance/request/accept`, null, {
+        params: { order_id }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error confirming advance booking:", error);
+      throw error.response?.data || { message: "Failed to accept booking." };
+    }
+  },
+  async cancelAdvanceBooking(order_id) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/orders/advance/cancel`, null, {
+        params: { order_id }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error canceling advance booking:", error);
+      throw error.response?.data || { message: "Failed to cancel booking." };
+    }
+  },
+  async  rejectAdvanceBooking(order_id) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/orders/advance/request/reject`, null, {
+        params: { order_id }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error rejecting advance booking:", error);
+      throw error.response?.data || { message: "Failed to reject booking." };
+    }
+  },
+  async  completeAdvanceBooking(order_id) {
+    try {
+      const response = await axios.post(`${API_BASE_URL}/orders/advance/complete`, null, {
+        params: { order_id }
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Error rejecting advance booking:", error);
+      throw error.response?.data || { message: "Failed to complete booking." };
+    }
+  },
 
   // Fetch real-time instant booking updates using SSE
   listenToInstantBooking(chef_id, onMessage, onError) {

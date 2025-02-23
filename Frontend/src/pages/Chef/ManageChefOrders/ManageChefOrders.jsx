@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import InstantOrderCard from "../../../components/InstantOrderCard/InstantOrderCard";
+import OrderCard from "../../../components/OrderCard/OrderCard";
 import MapsCard from "../../../components/Maps/MapsCard";
 import { useNotification } from "../../../context/NotificationsContext";
 import { toast } from "react-toastify";
 import APIService from "../../../API/APIService";
 import { auth } from "../../../Firebase/firebase";
 import { initFlowbite } from "flowbite";
+import getImgUrl from "../../../utils/images";
 
 const ManageChefOrders = ({ chef_id }) => {
+  const [refresh, setReferesh] = useState(false)
   const [status, setStatus] = useState("");
   const [orderstatus,setOrderstatus] = useState("");
   const [completedOrders, setCompletedOrders] = useState([]);
@@ -469,34 +471,6 @@ const ManageChefOrders = ({ chef_id }) => {
     fetchOrder(id);
   }, []);
 
-  // const handleComplete = async () => {
-  //   const orderId = orderData?.order_id;
-  //   try {
-  //     // const response = await fetch("http://localhost:3000/api/orders/update-instant-book", {
-  //     //   method: "PUT",
-  //     //   headers: { "Content-Type": "application/json" },
-  //     //   body: JSON.stringify({ orderId, chef_id }),
-  //     // });
-
-  //     // const result = await response.json();
-  //     const result = await APIService.updateInstantBookStatus(orderId, chef_id);
-  //     console.log("Complete response:", result);
-
-  //     if (result.message === "Order status updated to COMPLETED") {
-  //       toast.success("Order marked as completed.");
-  //       setAccepted(false);
-  //       // handleCloseCard();
-  //     } else {
-  //       toast.error(result.message || "Failed to complete the order.");
-  //     }
-  //   } catch (error) {
-  //     console.error("Error completing the order:", error); // Log the full error message
-  //     toast.error("Error completing the order.");
-  //   } finally {
-  //     const id = auth.currentUser.uid;
-  //     fetchOrder(id);
-  //   }
-  // };
 
   const handleComplete = async (order_id) => {
     
@@ -526,6 +500,94 @@ const ManageChefOrders = ({ chef_id }) => {
     }
   };
 
+  const handleAdvanceComplete = async(order_id) => {
+
+    if(!order_id) toast.error("Order ID required") 
+
+    
+    try {
+      const result = await APIService.completeAdvanceBooking(order_id)
+      console.log("Complete response:", result);
+
+      if (result.success) {
+        toast.success("Advance Order marked as completed.");
+      } else {
+        toast.error(result.message || "Failed to complete the advance order.");
+      }
+    } catch (error) {
+      console.error("Error completing the order:", error);
+      toast.error("Error completing the order.");
+    } finally {
+      setReferesh(prev => !prev)
+    }
+  }
+  const handleAdvanceCancel = async(order_id) => {
+
+    if(!order_id) toast.error("Order ID required") 
+
+    
+    try {
+      const result = await APIService.cancelAdvanceBooking(order_id)
+      console.log("Cancel response:", result);
+
+      if (result.success) {
+        toast.success("Advance Order marked as cancelled.");
+      } else {
+        toast.error(result.message || "Failed to cancel the advance order.");
+      }
+    } catch (error) {
+      console.error("Error cancelling the order:", error);
+      toast.error("Error cancelling the order.");
+    } finally {
+      setReferesh(prev => !prev)
+    }
+  }
+  const handleAdvanceAccept = async(order_id) => {
+
+    if(!order_id) toast.error("Order ID required") 
+
+    
+    try {
+      const result = await APIService.cancelAdvanceBooking(order_id)
+      console.log("Accept response:", result);
+
+      if (result.success) {
+        toast.success("Advance Order marked as confirmed.");
+      } else {
+        toast.error(result.message || "Failed to accept the advance order.");
+      }
+    } catch (error) {
+      console.error("Error accepting the order:", error);
+      toast.error("Error accepting the order.");
+    } finally {
+      setReferesh(prev => !prev)
+    }
+  }
+  const handleAdvanceReject = async(order_id) => {
+
+    if(!order_id) toast.error("Order ID required") 
+
+    
+    try {
+      const result = await APIService.cancelAdvanceBooking(order_id)
+      console.log("Reject response:", result);
+
+      if (result.success) {
+        toast.success("Advance Order marked as rejected.");
+      } else {
+        toast.error(result.message || "Failed to reject the advance order.");
+      }
+    } catch (error) {
+      console.error("Error rejecting the order:", error);
+      toast.error("Error rejecting the order.");
+    } finally {
+      setReferesh(prev => !prev)
+
+    }
+  }
+
+
+
   const handleCancel = async (order_id) => {
     
     if(!order_id) toast.error("Order ID required")
@@ -554,6 +616,8 @@ const ManageChefOrders = ({ chef_id }) => {
     }
   };
 
+  const [todaysOrders, setTodaysOrders] = useState([])
+  const [pendingOrders, setPendingOrders] = useState([])
   useEffect(() => {
     const fetchCompletedOrdersAndRecipes = async () => {
       try {
@@ -561,7 +625,20 @@ const ManageChefOrders = ({ chef_id }) => {
         const orders = await APIService.fetchAllOrdersByChefId(chef_id);
         
         if (orders.length === 0) return;
+
+        orders?.sort((a, b)=> new Date(b.order_date) - new Date(a.order_date));
+
+        const ordersForToday = orders.filter( order => {
+          const date = new Date(order.start_date_time)
+          return date.toLocaleDateString() === new Date().toLocaleDateString() && !['COMPLETED', 'CANCELLED'].includes(order.status)
+        })
+
+        const pendOrders = orders.filter( order => order.type === 'ADVANCE' && order.status === 'PENDING')
+
         setCompletedOrders(orders);
+        setTodaysOrders(ordersForToday);
+        setPendingOrders(pendOrders)
+        console.log("Orders for Today: ", ordersForToday)
 
         // // Fetch recipes for each order
         // const recipePromises = orders.map((order) =>
@@ -590,7 +667,7 @@ const ManageChefOrders = ({ chef_id }) => {
     if (chef_id) {
       fetchCompletedOrdersAndRecipes();
     }
-  }, [chef_id, orderData]);
+  }, [chef_id, orderData, refresh]);
 
 
 
@@ -604,7 +681,8 @@ const ManageChefOrders = ({ chef_id }) => {
     <div className="bg-slate-100 p-10 rounded-md shadow-md min-h-screen">
       <h1 className="font-semibold text-xl text-gray-500">Overview</h1>
 
-      <div className="w-full flex items-end justify-end">
+      <div className="w-full flex items-end justify-between p-10">
+      <h3>Current Status: <span className={`${status === "READY" ? "text-green-500" : status === "BUSY" ? "text-red-500" : ""}`}>{status ? status : "Not Set"}</span></h3>
         <button
           onClick={() => {
             const nextStatus = status === "READY" ? "BUSY" : "READY"; // Toggle between READY and BUSY
@@ -619,14 +697,14 @@ const ManageChefOrders = ({ chef_id }) => {
           {status === "READY" ? "BUSY" : "READY"}
         </button>
       </div>
-      <h3>Current Status: <span className={`${status === "READY" ? "text-green-500" : status === "BUSY" ? "text-red-500" : ""}`}>{status ? status : "Not Set"}</span></h3>
-
+      <h1 className="font-normal text-xl text-gray-500">Instant Orders</h1>
       <div className="py-5 flex gap-2">
         {instantBookingNotification ? (
           <div className="flex gap-2 w-full">
             {/* Instant Order Card with notification details */}
-            <InstantOrderCard
+            <OrderCard
               timeRemaining={ttl}
+              imageUrl={getImgUrl(parseInt(instantBookingNotification.data.recipe_id, 10)|| -1)}
               title={instantBookingNotification.data.recipe_title || ""}
               description={instantBookingNotification.body}
               recipeId={instantBookingNotification.data.recipe_id}
@@ -638,7 +716,7 @@ const ManageChefOrders = ({ chef_id }) => {
               }
               active={true}
               UserStatus={orderstatus}
-              
+              type={"INSTANT"}
               // onComplete={handleComplete}
               // accepted={accepted}
               // onClose={handleCloseCard}
@@ -655,7 +733,7 @@ const ManageChefOrders = ({ chef_id }) => {
         ) : orderData?.length > 0 ? orderData.map( order => (
           <div className="flex gap-2 w-full">
           {/* Instant Order Card for fetched orderData */}
-          <InstantOrderCard
+          <OrderCard
             title={`Order ${order?.title}`}
             description={`Total Price: ₹${order.total_price}`}
             recipeId={order?.recipe_id}
@@ -665,6 +743,7 @@ const ManageChefOrders = ({ chef_id }) => {
             onCancel={() => handleCancel(order.order_id)}
             active={false}
             UserStatus={orderstatus}
+            type={order?.type}
           />
           <div className="w-full border rounded-lg overflow-hidden">
             <MapsCard
@@ -681,6 +760,81 @@ const ManageChefOrders = ({ chef_id }) => {
           </div>
         )}
       </div>
+      <h1 className="font-normal text-xl text-gray-500">Today's Orders</h1>
+
+      { todaysOrders.length > 0 ? todaysOrders.map(
+        order => (
+          <div className="flex gap-2 w-full">
+          {/* Instant Order Card for fetched orderData */}
+          <OrderCard
+            imageUrl={getImgUrl(order.recipe_id)}
+            title={order?.title}
+            description={`Total Price: ₹${order.total_price}`}
+            recipeId={order?.recipe_id}
+            customerId={order?.customer_id}
+            location={order?.location}
+            onComplete={() => handleAdvanceComplete(order.order_id)}
+            onCancel={() => handleAdvanceCancel(order.order_id)}
+            active={false}
+            date={new Date(order.start_date_time).toLocaleDateString()}
+            startTime={new Date(order.start_date_time).toLocaleTimeString()}
+            endTime={new Date(order.end_date_time).toLocaleTimeString()}
+            // UserStatus={orderstatus}
+            type={order?.type}
+          />
+          <div className="w-full border rounded-lg overflow-hidden">
+              <MapsCard
+                latitude={parseFloat(order?.latitude) || 0}
+                longitude={parseFloat(order?.longitude) || 0}
+              />
+          </div>
+        </div>
+        )
+      ) : (
+        <div className="w-full text-center text-gray-500 py-10">
+            <h2 className="text-lg">📭 You have no orders for today.</h2>
+      </div>
+      )
+      }
+
+      <hr className="my-10 border-gray-200"/>
+      <h1 className="font-normal text-xl text-gray-500 mb-5">Pending orders</h1>
+
+      { pendingOrders.length > 0 ? pendingOrders.map(
+        order => (
+          <div className="flex gap-2 w-full">
+          {/* Instant Order Card for fetched orderData */}
+          <OrderCard
+            title={order?.title}
+            imageUrl={getImgUrl(order.recipe_id)}
+            description={`Total Price: ₹${order.total_price}`}
+            recipeId={order?.recipe_id}
+            customerId={order?.customer_id}
+            location={order?.location}
+            onAccept={()=>handleAdvanceAccept(order.order_id)}
+            onReject={()=>handleAdvanceReject(order.order_id)}
+            active={true}
+            // UserStatus={orderstatus}
+            date={new Date(order.start_date_time).toLocaleDateString()}
+            startTime={new Date(order.start_date_time).toLocaleTimeString()}
+            endTime={new Date(order.end_date_time).toLocaleTimeString()}
+          />
+          <div className="w-full border rounded-lg overflow-hidden">
+            <MapsCard
+              latitude={parseFloat(order?.latitude) || 0}
+              longitude={parseFloat(order?.longitude) || 0}
+            />
+          </div>
+        </div>
+        )
+      ) : (
+        <div className="w-full text-center text-gray-500 py-10">
+            <h2 className="text-lg">📭 You have no PENDING orders.</h2>
+      </div>
+      )
+      }
+      
+
       <h1 className="font-normal text-xl text-gray-500">Order History</h1>
       <Table
         completedOrders={completedOrders}
@@ -696,13 +850,21 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
   const [customerData,setCustomerData] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
 
+  useEffect(()=>{
+    initFlowbite();
+  },[])
+
   const handleView =  async (order) => {
-    
-    setCurrentOrder(order)
-    const result = await APIService.getCustomerById(order?.customer_id);
-    if (result) {
-      setCustomerData(result)
+    try {
+      const result = await APIService.getCustomerById(order?.customer_id);
+      if (result) {
+        setCustomerData(result)
+      }
+      setCurrentOrder(order)
+    } catch (error) {
+      toast.error("Error fetching order details")
     }
+    
   }
 
   
@@ -751,7 +913,7 @@ console.log('customerdata',customerData)
                   href="#"
                   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
                 >
-                  Reward
+                  Show only 
                 </a>
               </li>
               <li>
@@ -886,7 +1048,7 @@ console.log('customerdata',customerData)
                 </th>
                 <td class="px-6 py-4">{order?.title || "No recipe title"}</td>
                 <td class="px-6 py-4">
-                  {
+                  {/* {
                     // Combine today's date with the provided time string and format it
                     (() => {
                       const timeString = order?.end_date_time; // Assuming order.end_date_time is in the format "11:55:26.300822"
@@ -900,7 +1062,8 @@ console.log('customerdata',customerData)
                       // Return the formatted date in dd/mm/yyyy format
                       return dateWithTime.toLocaleDateString("en-GB");
                     })()
-                  }
+                  } */}
+                  {new Date(order?.order_date).toLocaleString()}
                 </td>
                 <td class="px-6 py-4">{order?.type}</td>
                 <td class="px-6 py-4">
@@ -908,7 +1071,7 @@ console.log('customerdata',customerData)
                     <div
                       class={`${
                         order.status === "COMPLETED" ? "bg-green-500" 
-                        : order.status === "CONFIRMED" ? "bg-purple-300"
+                        : order.status === "CONFIRMED" ? "bg-purple-500"
                         : order.status === "PENDING" ? "bg-yellow-300" 
                         : order.status === "CANCELLED" ? "bg-red-500" 
                         : "bg-gray-500"
@@ -944,7 +1107,7 @@ console.log('customerdata',customerData)
         class="fixed top-0 left-0 right-0 z-50 items-center justify-center hidden w-full p-4 overflow-x-hidden overflow-y-auto md:inset-0 h-[calc(100%-1rem)] max-h-full"
       >
         <div class="relative w-full max-w-2xl max-h-full">
-          <form class="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
+          <form class="relative bg-white rounded-lg drop-shadow-2xl dark:bg-gray-700">
             <div class="flex items-start justify-between p-4 border-b rounded-t dark:border-gray-600 border-gray-200">
               <h3 class="text-xl font-semibold text-gray-900 dark:text-white">
                 Detailed Info
@@ -978,7 +1141,7 @@ console.log('customerdata',customerData)
               <div class="col-span-6 sm:col-span-3">
                   <label
                     for="phone-number"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500 dark:text-white"
                   >
                     Order ID
                   </label>
@@ -987,7 +1150,7 @@ console.log('customerdata',customerData)
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="address"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
                    Recipe
                   </label>
@@ -1007,7 +1170,7 @@ console.log('customerdata',customerData)
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="customer-fullname"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
                     Customer Name
                   </label>
@@ -1018,7 +1181,7 @@ console.log('customerdata',customerData)
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
                     Email
                   </label>
@@ -1028,17 +1191,17 @@ console.log('customerdata',customerData)
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
                     Price
                   </label>
-                  <p>{currentOrder?.price}</p>
+                  <p>₹ {currentOrder?.price}</p>
                 </div>
 
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
                     Type
                   </label>
@@ -1048,9 +1211,9 @@ console.log('customerdata',customerData)
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
-                    Date
+                    Order Placed Date
                   </label>
                   <p>{new Date(currentOrder?.order_date).toLocaleDateString()}</p>
                 </div>
@@ -1058,14 +1221,14 @@ console.log('customerdata',customerData)
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
                     STATUS
                   </label>
                   <div
                       class={`${
                         currentOrder?.status === "COMPLETED" ? "bg-green-500" 
-                        : currentOrder?.status === "CONFIRMED" ? "bg-purple-300"
+                        : currentOrder?.status === "CONFIRMED" ? "bg-purple-500"
                         : currentOrder?.status === "PENDING" ? "bg-yellow-300" 
                         : currentOrder?.status === "CANCELLED" ? "bg-red-500" 
                         : "bg-gray-500"
@@ -1077,7 +1240,7 @@ console.log('customerdata',customerData)
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
                     Start Date Time
                   </label>
@@ -1087,7 +1250,7 @@ console.log('customerdata',customerData)
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
-                    class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
+                    class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
                     End Date Time
                   </label>

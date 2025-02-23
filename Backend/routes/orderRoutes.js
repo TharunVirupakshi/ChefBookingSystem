@@ -923,6 +923,7 @@ const advanceBookingSchema = Joi.object({
 })
 
 
+
 router.post('/advance', async(req, res) => {
   const { error, value } = advanceBookingSchema.validate(req.body)
   if (error) {
@@ -974,19 +975,64 @@ router.post('/advance', async(req, res) => {
     // Define a fixed buffer time in minutes (could be made dynamic)
     const bufferTime = 30;
 
+
+    const prevOrderDirectCollisionResult = await client.query(
+      `SELECT * FROM orders 
+      WHERE chef_id = $1 
+        AND status = 'CONFIRMED' 
+        AND DATE(end_date_time) = DATE($2)
+        AND end_date_time >= $2 AND start_date_time <= $2
+      ORDER BY end_date_time DESC LIMIT 1`,
+      [chef_id, curOrderStart]
+    );
+    
+  const prevDirecCollisionOrder = prevOrderDirectCollisionResult.rowCount > 0 ? prevOrderDirectCollisionResult.rows[0] : null;
+  
+  if(prevDirecCollisionOrder){
+    console.log("DIRECT COLLISION with prev order: ", prevDirecCollisionOrder.order_id)
+    return res.status(409).json({
+      success: false,
+      message: "Booking collision: Cannot accommodate the booking. [Direct Collison with PREV ORDER]. Suggested Start after: "+prevDirecCollisionOrder.end_date_time
+    });
+  }
+
+  const nextOrderDirectCollisionResult = await client.query(
+    `SELECT * FROM orders 
+    WHERE chef_id = $1 
+      AND status = 'CONFIRMED' 
+      AND DATE(start_date_time) = DATE($2)
+      AND start_date_time <= $2 AND end_date_time >= $2
+    ORDER BY start_date_time ASC LIMIT 1`,
+    [chef_id, curOrderEnd]
+  );
+   
+  const nextDirectCollisionOrder = nextOrderDirectCollisionResult.rowCount > 0 ? nextOrderDirectCollisionResult.rows[0] : null;
+  if(nextDirectCollisionOrder){
+    console.log("DIRECT COLLISION with prev order: ", nextDirectCollisionOrder.order_id)
+    const suggestedStartTime = new Date(new Date(nextDirectCollisionOrder.start_date_time).getTime() - curOrderDurationMs);
+    return res.status(409).json({
+      success: false,
+      message: "Booking collision: Cannot accommodate the booking [Directo Collison with NEXT ORDER]. Suggested Start before: "+ suggestedStartTime
+    });
+  }
+
+
     // Retrieve previous confirmed order (if any) that ends before current order starts and is on the same day
     const prevOrderResult = await client.query(
       `SELECT * FROM orders 
       WHERE chef_id = $1 
         AND status = 'CONFIRMED' 
         AND DATE(end_date_time) = DATE($2)
-        AND end_date_time <= $2 
+        AND end_date_time <= $2
       ORDER BY end_date_time DESC LIMIT 1`,
       [chef_id, curOrderStart]
-    );
-    const prevOrder = prevOrderResult.rowCount > 0 ? prevOrderResult.rows[0] : null;
+      );
 
     
+    const prevOrder = prevOrderResult.rowCount > 0 ? prevOrderResult.rows[0] : null;
+    
+
+   
     // Retrieve next confirmed order (if any) that starts after current order ends and is on the same day as curOrderStart
     const nextOrderResult = await client.query(
       `SELECT * FROM orders 
@@ -997,6 +1043,7 @@ router.post('/advance', async(req, res) => {
       ORDER BY start_date_time ASC LIMIT 1`,
       [chef_id, curOrderStart]
     );
+  
     const nextOrder = nextOrderResult.rowCount > 0 ? nextOrderResult.rows[0] : null;
 
 
@@ -1043,7 +1090,7 @@ router.post('/advance', async(req, res) => {
       const availableGapMs = endLimit.getTime() - startLimit.getTime();
       
       const diffMs = availableGapMs - curOrderDurationMs;
-
+      console.log("Overlap: ", diffMs)
       if(diffMs < -acceptableOverlapMs){
         return res.status(409).json({
           success: false,

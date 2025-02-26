@@ -19,15 +19,15 @@ router.get("/", async (req, res) => {
   }
 });
 
-
 // Endpoint to fetch blocked dates (time slots) for a chef on a given date
-router.get('/blocked-dates', async (req, res) => {
+router.get("/blocked-dates", async (req, res) => {
   const { chef_id, date } = req.query;
 
   if (!chef_id || !date) {
     return res.status(400).json({
       success: false,
-      message: 'chef_id and date are required. (date should be in YYYY-MM-DD format)'
+      message:
+        "chef_id and date are required. (date should be in YYYY-MM-DD format)",
     });
   }
 
@@ -43,19 +43,19 @@ router.get('/blocked-dates', async (req, res) => {
       [chef_id, date]
     );
 
+    console.log(result.rows);
     return res.status(200).json({
       success: true,
-      blockedDates: result.rows
+      blockedDates: result.rows,
     });
   } catch (error) {
     console.error("Error fetching blocked dates:", error);
     return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: "Internal server error",
     });
   }
 });
-
 
 router.get("/:chef_id", async (req, res) => {
   const { chef_id } = req.params;
@@ -75,7 +75,9 @@ router.get("/:chef_id", async (req, res) => {
     const result = await client.query(query, [chef_id]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "No orders found for this chef." });
+      return res
+        .status(404)
+        .json({ message: "No orders found for this chef." });
     }
 
     res.status(200).json(result.rows);
@@ -85,45 +87,48 @@ router.get("/:chef_id", async (req, res) => {
   }
 });
 
+router.get("/instant-order", async (req, res) => {
+  const { chef_id } = req.body;
 
-
-router.get('/instant-order', async (req, res) => {
-    const { chef_id } = req.body;
-
-    try {
-        // Validate chef_id
-        if (!chef_id || typeof chef_id !== 'string') {
-            return res.status(400).json({
-                success: false,
-                message: 'Chef ID must be a valid string.',
-            });
-        }
-
-        // Fetch the most recent PENDING INSTANT order for the chef
-        const query = "SELECT * FROM orders WHERE chef_id = $1 AND status = 'PENDING' AND type = 'INSTANT' ORDER BY order_date DESC LIMIT 1;";
-
-        const result = await client.query( "SELECT * FROM orders WHERE chef_id = $1 AND status = 'PENDING' AND type = 'INSTANT' ORDER BY order_date DESC LIMIT 1;", [chef_id]);
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: 'No pending instant booking request found for this chef.',
-            });
-        }
-
-        // Return the most recent PENDING INSTANT order
-        res.status(200).json({
-            success: true,
-            message: 'Fetched pending instant booking request successfully.',
-            data: result.rows[0],
-        });
-    } catch (err) {
-        console.error('Error fetching instant booking:', err);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to fetch instant booking request. Please try again later.',
-        });
+  try {
+    // Validate chef_id
+    if (!chef_id || typeof chef_id !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Chef ID must be a valid string.",
+      });
     }
+
+    // Fetch the most recent PENDING INSTANT order for the chef
+    const query =
+      "SELECT * FROM orders WHERE chef_id = $1 AND status = 'PENDING' AND type = 'INSTANT' ORDER BY order_date DESC LIMIT 1;";
+
+    const result = await client.query(
+      "SELECT * FROM orders WHERE chef_id = $1 AND status = 'PENDING' AND type = 'INSTANT' ORDER BY order_date DESC LIMIT 1;",
+      [chef_id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No pending instant booking request found for this chef.",
+      });
+    }
+
+    // Return the most recent PENDING INSTANT order
+    res.status(200).json({
+      success: true,
+      message: "Fetched pending instant booking request successfully.",
+      data: result.rows[0],
+    });
+  } catch (err) {
+    console.error("Error fetching instant booking:", err);
+    res.status(500).json({
+      success: false,
+      message:
+        "Failed to fetch instant booking request. Please try again later.",
+    });
+  }
 });
 
 // router.get("/:id", async (req, res) => {
@@ -145,7 +150,7 @@ router.get('/instant-order', async (req, res) => {
 //   });
 
 router.get("/instant/current", async (req, res) => {
-  const { chef_id } = req.query;  // userId is the chef_id
+  const { chef_id } = req.query; // userId is the chef_id
 
   if (!chef_id) {
     return res.status(400).json({ message: "chef_id is required" });
@@ -163,7 +168,9 @@ router.get("/instant/current", async (req, res) => {
     const chefStatusResult = await client.query(chefStatusQuery, [chef_id]);
 
     if (chefStatusResult.rows.length === 0) {
-      return res.status(404).json({ message: "No pending instant bookings for this chef." });
+      return res
+        .status(404)
+        .json({ message: "No pending instant bookings for this chef." });
     }
 
     // ✅ Step 2: Get the order_id from chef_status
@@ -180,18 +187,18 @@ router.get("/instant/current", async (req, res) => {
     const orderResult = await client.query(orderQuery, [orderId]);
 
     if (orderResult.rows.length === 0) {
-      return res.status(404).json({ message: "No matching instant pending orders found." });
+      return res
+        .status(404)
+        .json({ message: "No matching instant pending orders found." });
     }
 
     // ✅ Step 4: Return the order details with recipe information
     return res.status(200).json(orderResult.rows);
-
   } catch (error) {
     console.error("❌ Error fetching order by chef_id:", error);
     res.status(500).json({ message: "Error fetching order" });
   }
 });
-
 
 router.get("/completed-orders/:chef_id", async (req, res) => {
   const { chef_id } = req.params; // Extract chef_id from URL params
@@ -228,9 +235,11 @@ router.get("/customer-orders/:customer_id", async (req, res) => {
        WHERE o.customer_id = $1 AND o.deleted_at IS NULL`,
       [customer_id]
     );
-    
+
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "No orders found for this customer" });
+      return res
+        .status(404)
+        .json({ message: "No orders found for this customer" });
     }
 
     res.status(200).json(result.rows);
@@ -239,11 +248,6 @@ router.get("/customer-orders/:customer_id", async (req, res) => {
     res.status(500).json({ message: "Error fetching orders and recipes" });
   }
 });
-
-
-
-  
-
 
 /*
     Create order (Instant Booking) (Only one req can reach the chef)
@@ -280,8 +284,6 @@ router.get("/customer-orders/:customer_id", async (req, res) => {
 
 */
 
-
-
 router.put("/update-instant-book", async (req, res) => {
   const { orderId, chef_id, status } = req.body; // Include status in the request body
 
@@ -289,10 +291,11 @@ router.put("/update-instant-book", async (req, res) => {
     return res.status(400).json({ message: "One or more params are missing" });
   }
 
-
   // Ensure status is either COMPLETED or CANCELLED
   if (!["COMPLETED", "CANCELLED"].includes(status)) {
-    return res.status(400).json({ message: "Invalid status. Allowed values: COMPLETED, CANCELLED" });
+    return res.status(400).json({
+      message: "Invalid status. Allowed values: COMPLETED, CANCELLED",
+    });
   }
 
   try {
@@ -305,8 +308,13 @@ router.put("/update-instant-book", async (req, res) => {
     );
 
     if (chefStatusResult.rowCount === 0) {
-      console.error(`No matching record in chef_status for chef_id: ${chef_id} and order_id: ${orderId}`);
-      return res.status(404).json({ message: "Record not found for the given chef_id and order_id in chef_status" });
+      console.error(
+        `No matching record in chef_status for chef_id: ${chef_id} and order_id: ${orderId}`
+      );
+      return res.status(404).json({
+        message:
+          "Record not found for the given chef_id and order_id in chef_status",
+      });
     }
 
     // Update the status and end_date_time in orders table
@@ -319,17 +327,21 @@ router.put("/update-instant-book", async (req, res) => {
 
     if (orderResult.rowCount === 0) {
       console.error(`No matching record in orders for order_id: ${orderId}`);
-      return res.status(404).json({ message: "Record not found for the given order_id in orders" });
+      return res
+        .status(404)
+        .json({ message: "Record not found for the given order_id in orders" });
     }
 
     // If both queries are successful, send a success response
     res.status(200).json({ message: `Order status updated to ${status}` });
   } catch (error) {
     console.error("Error updating instant book status:", error);
-    res.status(500).json({ message: "Error updating instant book status", error: error.message });
+    res.status(500).json({
+      message: "Error updating instant book status",
+      error: error.message,
+    });
   }
 });
-
 
 // Create Instant Booking
 
@@ -354,12 +366,13 @@ router.post("/instant", async (req, res) => {
   const { chef_id, customer_id, recipe_id, latitude, longitude } = value;
 
   try {
-
-
     // 1️⃣ Check Chef Status in Redis
     const chefStatus = await redisService.getChefStatus(chef_id);
-    if (chefStatus !== 'READY') {
-        return res.status(400).json({success: false, message: 'Chef is currently busy or unavailable' });
+    if (chefStatus !== "READY") {
+      return res.status(400).json({
+        success: false,
+        message: "Chef is currently busy or unavailable",
+      });
     }
 
     // 0️⃣ Check if the recipe belongs to the chef and get the recipe title
@@ -385,9 +398,9 @@ router.post("/instant", async (req, res) => {
     const existingRequest = await redisClient.get(activeRequestKey);
 
     if (existingRequest) {
-      const data = JSON.parse(existingRequest)
+      const data = JSON.parse(existingRequest);
 
-      if(!(data.status == "CANCELLED" || data.status == "REJECTED")){
+      if (!(data.status == "CANCELLED" || data.status == "REJECTED")) {
         return res.status(400).json({
           success: false,
           message:
@@ -396,45 +409,50 @@ router.post("/instant", async (req, res) => {
       }
     }
 
-      // 2️⃣ Acquire Redis Lock to prevent concurrent requests, contention window
-      const lockAcquired = await redisService.acquireLock(
-        `chef_lock_${chef_id}`,
-        60
-      );
+    // 2️⃣ Acquire Redis Lock to prevent concurrent requests, contention window
+    const lockAcquired = await redisService.acquireLock(
+      `chef_lock_${chef_id}`,
+      60
+    );
 
-      if (!lockAcquired) {
-        return res.status(400).json({
-          success: false,
-          message: "Chef is already locked by another request.",
-        });
-      }
+    if (!lockAcquired) {
+      return res.status(400).json({
+        success: false,
+        message: "Chef is already locked by another request.",
+      });
+    }
 
-      const fcmToken = await redisService.getFCMToken(chef_id);
-      if (!fcmToken) {
-        await redisService.releaseLock(`chef_lock_${chef_id}`);
-        return res.status(400).json({
-          success: false,
-          message: "Chef is not registered for notifications.",
-        });
-      }
+    const fcmToken = await redisService.getFCMToken(chef_id);
+    if (!fcmToken) {
+      await redisService.releaseLock(`chef_lock_${chef_id}`);
+      return res.status(400).json({
+        success: false,
+        message: "Chef is not registered for notifications.",
+      });
+    }
 
-          // 3️⃣ Begin Transaction
-      await client.query('BEGIN ISOLATION LEVEL SERIALIZABLE');
+    // 3️⃣ Begin Transaction
+    await client.query("BEGIN ISOLATION LEVEL SERIALIZABLE");
 
-      // 4️⃣ Check Chef's Instant Booking Status
-      const statusResult = await client.query(
-          'SELECT instant_book FROM chef_status WHERE chef_id = $1 FOR UPDATE',
-          [chef_id]
-      );
+    // 4️⃣ Check Chef's Instant Booking Status
+    const statusResult = await client.query(
+      "SELECT instant_book FROM chef_status WHERE chef_id = $1 FOR UPDATE",
+      [chef_id]
+    );
 
+    if (
+      statusResult.rows[0].order_id !== null &&
+      statusResult.rows[0].instant_book == "PENDING"
+    ) {
+      await client.query("ROLLBACK");
+      await redisService.releaseLock(`chef_lock_${chef_id}`);
+      return res.status(400).json({
+        success: false,
+        message: "Chef is not available for instant booking",
+      });
+    }
 
-      if (statusResult.rows[0].instant_book == 'PENDING' && statusResult.rows[0].order_id !== null) {
-          await client.query('ROLLBACK');
-          await redisService.releaseLock(`chef_lock_${chef_id}`);
-          return res.status(400).json({success: false, message: 'Chef is not available for instant booking' });
-      }
-
-      await client.query('COMMIT');
+    await client.query("COMMIT");
 
     // 3️⃣ Generate a unique req_id and prepare request data
     const req_id = uuidv4();
@@ -486,14 +504,14 @@ router.post("/instant", async (req, res) => {
     console.error("Error during instant booking:", err);
 
     try {
-        // Rollback DB Transaction
-        await client.query('ROLLBACK');
+      // Rollback DB Transaction
+      await client.query("ROLLBACK");
     } catch (rollbackErr) {
-        console.error('Error during ROLLBACK:', rollbackErr);
+      console.error("Error during ROLLBACK:", rollbackErr);
     }
 
     try {
-      await redisClient.del(`instant_booking:${chef_id}`)
+      await redisClient.del(`instant_booking:${chef_id}`);
       await redisService.releaseLock(`chef_lock_${chef_id}`);
     } catch (redisErr) {
       console.error("Error releasing Redis lock:", redisErr);
@@ -504,8 +522,6 @@ router.post("/instant", async (req, res) => {
       .json({ success: false, message: "Instant booking failed." });
   }
 });
-
-
 
 router.post("/instant/cancel", async (req, res) => {
   try {
@@ -547,7 +563,9 @@ router.post("/instant/cancel", async (req, res) => {
 
     // 🔹 Ensure TTL is valid (Redis returns -1 for NO_EXPIRY and -2 for NON_EXISTENT keys)
     if (ttl === -1) {
-      console.warn(`⚠️ Warning: Key ${activeRequestKey} has no expiration set.`);
+      console.warn(
+        `⚠️ Warning: Key ${activeRequestKey} has no expiration set.`
+      );
       ttl = 180; // Default TTL fallback (3 minutes)
     } else if (ttl === -2) {
       return res.status(400).json({
@@ -580,7 +598,8 @@ router.post("/instant/cancel", async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Instant booking status updated to CANCELLED, and chef notified.",
+      message:
+        "Instant booking status updated to CANCELLED, and chef notified.",
     });
   } catch (error) {
     console.error("❌ Error cancelling instant booking:", error);
@@ -590,10 +609,6 @@ router.post("/instant/cancel", async (req, res) => {
     });
   }
 });
-
-
-
-
 
 // SSE Endpoint for Instant Booking TTL and Status
 router.get("/sse/instant-booking/:chef_id", async (req, res) => {
@@ -657,7 +672,7 @@ const responseSchema = Joi.object({
   customer_id: Joi.string().required(),
   recipe_id: Joi.number().integer().required(),
   response: Joi.string().valid("ACCEPT", "REJECT").required(),
-  chef_latitude: Joi.number().required(),  // Added latitude validation
+  chef_latitude: Joi.number().required(), // Added latitude validation
   chef_longitude: Joi.number().required(), // Added longitude validation
 });
 
@@ -735,7 +750,14 @@ router.post("/instant/response", async (req, res) => {
       .json({ success: false, message: error.details[0].message });
   }
 
-  const { chef_id, customer_id, recipe_id, response, chef_latitude, chef_longitude } = value;
+  const {
+    chef_id,
+    customer_id,
+    recipe_id,
+    response,
+    chef_latitude,
+    chef_longitude,
+  } = value;
   const activeRequestKey = `instant_booking:${chef_id}`;
 
   try {
@@ -765,10 +787,8 @@ router.post("/instant/response", async (req, res) => {
 
     // 3️⃣ Handle response: ACCEPT or REJECT
     if (response === "ACCEPT") {
-      
-
       const reqData = await redisClient.get(activeRequestKey);
-      const reqDataJson = await JSON.parse(reqData)
+      const reqDataJson = await JSON.parse(reqData);
 
       await client.query("BEGIN"); // Start transaction
       let orderId;
@@ -784,7 +804,17 @@ router.post("/instant/response", async (req, res) => {
           `INSERT INTO orders (customer_id, chef_id, recipe_id, total_price, status, type, start_date_time, end_date_time, latitude, longitude, chef_latitude, chef_longitude)
          VALUES ($1, $2, $3, $4, $5, 'INSTANT', NOW(), NOW(), $6, $7, $8, $9)
          RETURNING order_id`,
-          [customer_id, chef_id, recipe_id, 1000, "PENDING", reqDataJson.latitude, reqDataJson.longitude, chef_latitude, chef_longitude]
+          [
+            customer_id,
+            chef_id,
+            recipe_id,
+            1000,
+            "PENDING",
+            reqDataJson.latitude,
+            reqDataJson.longitude,
+            chef_latitude,
+            chef_longitude,
+          ]
         );
 
         // Ensure result contains the order_id
@@ -808,7 +838,7 @@ router.post("/instant/response", async (req, res) => {
           `SELECT 1 FROM chef_status WHERE chef_id = $1`,
           [chef_id]
         );
-        
+
         if (result.rowCount > 0) {
           // Update existing record
           await client.query(
@@ -837,7 +867,6 @@ router.post("/instant/response", async (req, res) => {
           30,
           JSON.stringify(requestData)
         );
-        
       } catch (err) {
         await client.query("ROLLBACK");
         throw err;
@@ -857,8 +886,8 @@ router.post("/instant/response", async (req, res) => {
         recipe_id: String(recipe_id),
         recipe_title: String(requestData.recipe_title || ""),
         type: "INSTANT_BOOKING_ACCEPTED",
-        chef_latitude: chef_latitude,  
-        chef_longitude: chef_longitude 
+        chef_latitude: chef_latitude,
+        chef_longitude: chef_longitude,
       };
 
       const fcmToken = await redisService.getFCMToken(customer_id);
@@ -880,7 +909,7 @@ router.post("/instant/response", async (req, res) => {
         success: true,
         message:
           "Order accepted, status updated, TTL extended, stored in DB, and notification sent to the customer.",
-          orderId,
+        orderId,
       });
     } else if (response === "REJECT") {
       requestData.status = "REJECTED";
@@ -899,7 +928,6 @@ router.post("/instant/response", async (req, res) => {
       //   ["AVAILABLE", chef_id]
       // );
 
-   
       // Send notification to the customer
       const userNotificationData = {
         chef_id: String(chef_id),
@@ -907,8 +935,8 @@ router.post("/instant/response", async (req, res) => {
         recipe_id: String(recipe_id),
         recipe_title: String(requestData.recipe_title || ""),
         type: "INSTANT_BOOKING_REJECTED",
-        chef_latitude: chef_latitude,  
-        chef_longitude: chef_longitude 
+        chef_latitude: chef_latitude,
+        chef_longitude: chef_longitude,
       };
 
       const fcmToken = await redisService.getFCMToken(customer_id);
@@ -925,20 +953,17 @@ router.post("/instant/response", async (req, res) => {
         "The chef has rejected your instant booking request.",
         userNotificationData
       );
-      
 
       return res.status(200).json({
         success: true,
         message:
           "Order rejected, status updated, and notification sent to the customer.",
       });
-    }else{
-        return res
+    } else {
+      return res
         .status(400)
         .json({ success: false, message: "Invalid response value." });
     }
-
-   
   } catch (err) {
     await client.query("ROLLBACK"); // Rollback transaction in case of error
     console.error("Error processing instant booking response:", err);
@@ -950,13 +975,13 @@ router.post("/instant/response", async (req, res) => {
   }
 });
 
-
-
 router.post("/advance/complete", async (req, res) => {
   const { order_id } = req.query;
 
   if (!order_id) {
-    return res.status(400).json({ success: false, message: "order_id is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "order_id is required" });
   }
 
   try {
@@ -965,11 +990,14 @@ router.post("/advance/complete", async (req, res) => {
       `SELECT * FROM orders WHERE order_id = $1 AND status = 'CONFIRMED' LIMIT 1`,
       [order_id]
     );
-    
+
     if (orderResult.rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Order not found or not in a CONFIRMED state." });
+      return res.status(404).json({
+        success: false,
+        message: "Order not found or not in a CONFIRMED state.",
+      });
     }
-    
+
     // Update the order status to CONFIRMED
     const updateResult = await client.query(
       `UPDATE orders 
@@ -978,20 +1006,20 @@ router.post("/advance/complete", async (req, res) => {
        RETURNING *`,
       [order_id]
     );
-    
+
     // Optionally, you can trigger notifications here (e.g., using FCM)
     // await sendFCMNotification(...);
 
     return res.status(200).json({
       success: true,
       message: "Order has been completed successfully.",
-      order: updateResult.rows[0]
+      order: updateResult.rows[0],
     });
   } catch (error) {
     console.error("Error completing advance booking: ", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     });
   }
 });
@@ -1000,7 +1028,9 @@ router.post("/advance/cancel", async (req, res) => {
   const { order_id } = req.query;
 
   if (!order_id) {
-    return res.status(400).json({ success: false, message: "order_id is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "order_id is required" });
   }
 
   try {
@@ -1009,11 +1039,14 @@ router.post("/advance/cancel", async (req, res) => {
       `SELECT * FROM orders WHERE order_id = $1 AND status = 'CONFIRMED' LIMIT 1`,
       [order_id]
     );
-    
+
     if (orderResult.rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Order not found or not in a CONFIRMED state." });
+      return res.status(404).json({
+        success: false,
+        message: "Order not found or not in a CONFIRMED state.",
+      });
     }
-    
+
     // Update the order status to CONFIRMED
     const updateResult = await client.query(
       `UPDATE orders 
@@ -1022,20 +1055,20 @@ router.post("/advance/cancel", async (req, res) => {
        RETURNING *`,
       [order_id]
     );
-    
+
     // Optionally, you can trigger notifications here (e.g., using FCM)
     // await sendFCMNotification(...);
 
     return res.status(200).json({
       success: true,
       message: "Order has been cancelled successfully.",
-      order: updateResult.rows[0]
+      order: updateResult.rows[0],
     });
   } catch (error) {
     console.error("Error cancelling advance booking: ", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     });
   }
 });
@@ -1044,7 +1077,9 @@ router.post("/advance/request/accept", async (req, res) => {
   const { order_id } = req.query;
 
   if (!order_id) {
-    return res.status(400).json({ success: false, message: "order_id is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "order_id is required" });
   }
 
   try {
@@ -1053,11 +1088,14 @@ router.post("/advance/request/accept", async (req, res) => {
       `SELECT * FROM orders WHERE order_id = $1 AND status = 'PENDING' LIMIT 1`,
       [order_id]
     );
-    
+
     if (orderResult.rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Order not found or not in a PENDING state." });
+      return res.status(404).json({
+        success: false,
+        message: "Order not found or not in a PENDING state.",
+      });
     }
-    
+
     // Update the order status to CONFIRMED
     const updateResult = await client.query(
       `UPDATE orders 
@@ -1066,20 +1104,20 @@ router.post("/advance/request/accept", async (req, res) => {
        RETURNING *`,
       [order_id]
     );
-    
+
     // Optionally, you can trigger notifications here (e.g., using FCM)
     // await sendFCMNotification(...);
 
     return res.status(200).json({
       success: true,
       message: "Order has been accepted successfully.",
-      order: updateResult.rows[0]
+      order: updateResult.rows[0],
     });
   } catch (error) {
     console.error("Error accepting advance booking: ", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     });
   }
 });
@@ -1087,7 +1125,9 @@ router.post("/advance/request/reject", async (req, res) => {
   const { order_id } = req.query;
 
   if (!order_id) {
-    return res.status(400).json({ success: false, message: "order_id is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "order_id is required" });
   }
 
   try {
@@ -1096,11 +1136,14 @@ router.post("/advance/request/reject", async (req, res) => {
       `SELECT * FROM orders WHERE order_id = $1 AND status = 'PENDING' LIMIT 1`,
       [order_id]
     );
-    
+
     if (orderResult.rowCount === 0) {
-      return res.status(404).json({ success: false, message: "Order not found or not in a PENDING state." });
+      return res.status(404).json({
+        success: false,
+        message: "Order not found or not in a PENDING state.",
+      });
     }
-    
+
     // Update the order status to CONFIRMED
     const updateResult = await client.query(
       `UPDATE orders 
@@ -1109,24 +1152,23 @@ router.post("/advance/request/reject", async (req, res) => {
        RETURNING *`,
       [order_id]
     );
-    
+
     // Optionally, you can trigger notifications here (e.g., using FCM)
     // await sendFCMNotification(...);
 
     return res.status(200).json({
       success: true,
       message: "Order has been rejected successfully.",
-      order: updateResult.rows[0]
+      order: updateResult.rows[0],
     });
   } catch (error) {
     console.error("Error rejecting advance booking: ", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     });
   }
 });
-
 
 // Advanced booking logic
 const advanceBookingSchema = Joi.object({
@@ -1135,32 +1177,34 @@ const advanceBookingSchema = Joi.object({
   recipe_id: Joi.number().integer().required(),
   latitude: Joi.number().required(), // 📍 Latitude
   longitude: Joi.number().required(), // 📍 Longitude
-  start_date: Joi.string().required()
-})
+  start_date: Joi.string().required(),
+});
 
-
-
-router.post('/advance', async(req, res) => {
-  const { error, value } = advanceBookingSchema.validate(req.body)
+router.post("/advance", async (req, res) => {
+  console.log("📩 Incoming Request Body:", req.body);
+  const { error, value } = advanceBookingSchema.validate(req.body);
   if (error) {
+    console.log("🚫 Validation Error:", error);
     return res
       .status(400)
       .json({ success: false, message: error.details[0].message });
   }
 
-  const { chef_id, customer_id, recipe_id, latitude, longitude, start_date } = value;
+  const { chef_id, customer_id, recipe_id, latitude, longitude, start_date } =
+    value;
 
-  try{
+  try {
+    console.log("\nADVANCE BOOKING--------------");
 
-    console.log("\nADVANCE BOOKING--------------")
-
-   // Ensure start_date is in the future
-   const curOrderStart = new Date(start_date);
-   console.log("CurOrderStart: ", curOrderStart.toLocaleString());
-   if (curOrderStart <= new Date()) {
-     return res.status(400).json({ success: false, message: "Booking date must be in the future." });
-   }
-
+    // Ensure start_date is in the future
+    const curOrderStart = new Date(start_date);
+    console.log("CurOrderStart: ", curOrderStart.toLocaleString());
+    if (curOrderStart <= new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "Booking date must be in the future.",
+      });
+    }
 
     // Validate if recipe belongs to chef
     const recipeResult = await client.query(
@@ -1185,12 +1229,16 @@ router.post('/advance', async(req, res) => {
     }
 
     // Calculate current order's end time based on preparation_time
-     const curOrderEnd = new Date(curOrderStart.getTime() + prepTime * 60000);
-     const curOrderDurationMs = curOrderEnd.getTime() - curOrderStart.getTime();
-    console.log("CurOrderEnd: ", curOrderEnd.toLocaleString(),"\nDuration: ", curOrderDurationMs/60000)
+    const curOrderEnd = new Date(curOrderStart.getTime() + prepTime * 60000);
+    const curOrderDurationMs = curOrderEnd.getTime() - curOrderStart.getTime();
+    console.log(
+      "CurOrderEnd: ",
+      curOrderEnd.toLocaleString(),
+      "\nDuration: ",
+      curOrderDurationMs / 60000
+    );
     // Define a fixed buffer time in minutes (could be made dynamic)
     const bufferTime = 30;
-
 
     const prevOrderDirectCollisionResult = await client.query(
       `SELECT * FROM orders 
@@ -1201,37 +1249,55 @@ router.post('/advance', async(req, res) => {
       ORDER BY end_date_time DESC LIMIT 1`,
       [chef_id, curOrderStart]
     );
-    
-  const prevDirecCollisionOrder = prevOrderDirectCollisionResult.rowCount > 0 ? prevOrderDirectCollisionResult.rows[0] : null;
-  
-  if(prevDirecCollisionOrder){
-    console.log("DIRECT COLLISION with PREV order: ", prevDirecCollisionOrder.order_id)
-    return res.status(409).json({
-      success: false,
-      message: "Booking collision: Cannot accommodate the booking. [Direct Collison with PREV ORDER]. Suggested Start after: "+prevDirecCollisionOrder.end_date_time
-    });
-  }
 
-  const nextOrderDirectCollisionResult = await client.query(
-    `SELECT * FROM orders 
+    const prevDirecCollisionOrder =
+      prevOrderDirectCollisionResult.rowCount > 0
+        ? prevOrderDirectCollisionResult.rows[0]
+        : null;
+
+    if (prevDirecCollisionOrder) {
+      console.log(
+        "DIRECT COLLISION with PREV order: ",
+        prevDirecCollisionOrder.order_id
+      );
+      return res.status(409).json({
+        success: false,
+        message:
+          "Booking collision: Cannot accommodate the booking. [Direct Collison with PREV ORDER]. Suggested Start after: " +
+          prevDirecCollisionOrder.end_date_time,
+      });
+    }
+
+    const nextOrderDirectCollisionResult = await client.query(
+      `SELECT * FROM orders 
     WHERE chef_id = $1 
       AND status = 'CONFIRMED' 
       AND DATE(start_date_time) = DATE($2)
       AND start_date_time <= $2 AND end_date_time >= $2
     ORDER BY start_date_time ASC LIMIT 1`,
-    [chef_id, curOrderEnd]
-  );
-   
-  const nextDirectCollisionOrder = nextOrderDirectCollisionResult.rowCount > 0 ? nextOrderDirectCollisionResult.rows[0] : null;
-  if(nextDirectCollisionOrder){
-    console.log("DIRECT COLLISION with NEXT order: ", nextDirectCollisionOrder.order_id)
-    const suggestedStartTime = new Date(new Date(nextDirectCollisionOrder.start_date_time).getTime() - curOrderDurationMs);
-    return res.status(409).json({
-      success: false,
-      message: "Booking collision: Cannot accommodate the booking [Directo Collison with NEXT ORDER]. Suggested Start before: "+ suggestedStartTime
-    });
-  }
+      [chef_id, curOrderEnd]
+    );
 
+    const nextDirectCollisionOrder =
+      nextOrderDirectCollisionResult.rowCount > 0
+        ? nextOrderDirectCollisionResult.rows[0]
+        : null;
+    if (nextDirectCollisionOrder) {
+      console.log(
+        "DIRECT COLLISION with NEXT order: ",
+        nextDirectCollisionOrder.order_id
+      );
+      const suggestedStartTime = new Date(
+        new Date(nextDirectCollisionOrder.start_date_time).getTime() -
+          curOrderDurationMs
+      );
+      return res.status(409).json({
+        success: false,
+        message:
+          "Booking collision: Cannot accommodate the booking [Directo Collison with NEXT ORDER]. Suggested Start before: " +
+          suggestedStartTime,
+      });
+    }
 
     // Retrieve previous confirmed order (if any) that ends before current order starts and is on the same day
     const prevOrderResult = await client.query(
@@ -1242,13 +1308,11 @@ router.post('/advance', async(req, res) => {
         AND end_date_time <= $2
       ORDER BY end_date_time DESC LIMIT 1`,
       [chef_id, curOrderStart]
-      );
+    );
 
-    
-    const prevOrder = prevOrderResult.rowCount > 0 ? prevOrderResult.rows[0] : null;
-    
+    const prevOrder =
+      prevOrderResult.rowCount > 0 ? prevOrderResult.rows[0] : null;
 
-   
     // Retrieve next confirmed order (if any) that starts after current order ends and is on the same day as curOrderStart
     const nextOrderResult = await client.query(
       `SELECT * FROM orders 
@@ -1259,127 +1323,147 @@ router.post('/advance', async(req, res) => {
       ORDER BY start_date_time ASC LIMIT 1`,
       [chef_id, curOrderStart]
     );
-  
-    const nextOrder = nextOrderResult.rowCount > 0 ? nextOrderResult.rows[0] : null;
 
+    const nextOrder =
+      nextOrderResult.rowCount > 0 ? nextOrderResult.rows[0] : null;
 
     let startLimit = null;
     let endLimit = null;
 
     // Head Clash Check: If there is a previous order, determine the earliest start allowed.
     if (prevOrder) {
-
-      console.log("Previous order id: ", prevOrder?.order_id || "N/A")
+      console.log("Previous order id: ", prevOrder?.order_id || "N/A");
 
       const departureDate = new Date(prevOrder.end_date_time);
       const originLoc = { lat: prevOrder.latitude, long: prevOrder.longitude };
-      const headETA = await getETA(originLoc, { lat: latitude, long: longitude }, departureDate);
+      const headETA = await getETA(
+        originLoc,
+        { lat: latitude, long: longitude },
+        departureDate
+      );
       // startLimit = previous order's end + ETA + buffer
-      startLimit = new Date(departureDate.getTime() + (headETA) * 60000);
+      startLimit = new Date(departureDate.getTime() + headETA * 60000);
 
-      console.log("PrevOrder ETA(mins): ", headETA, " startLimit: ", startLimit.toLocaleString())
-      
+      console.log(
+        "PrevOrder ETA(mins): ",
+        headETA,
+        " startLimit: ",
+        startLimit.toLocaleString()
+      );
     }
 
     // Tail Clash Check: If there is a next order, determine the latest end allowed.
     if (nextOrder) {
-
-      console.log("Next order id: ", nextOrder.order_id)
+      console.log("Next order id: ", nextOrder.order_id);
 
       const destLoc = { lat: nextOrder.latitude, long: nextOrder.longitude };
-      const tailETA = await getETA({ lat: latitude, long: longitude }, destLoc, curOrderEnd);
+      const tailETA = await getETA(
+        { lat: latitude, long: longitude },
+        destLoc,
+        curOrderEnd
+      );
       // endLimit = next order's start - (ETA + buffer)
-      const nextOrderStart = new Date(nextOrder.start_date_time)
-      endLimit = new Date(nextOrderStart.getTime() -  tailETA * 60000);
+      const nextOrderStart = new Date(nextOrder.start_date_time);
+      endLimit = new Date(nextOrderStart.getTime() - tailETA * 60000);
 
-      console.log("NextOrder ETA(mins): ", tailETA, "\nNextOrder Start: ",nextOrderStart.toLocaleString(),"\nendLimit: ", endLimit.toLocaleString())
+      console.log(
+        "NextOrder ETA(mins): ",
+        tailETA,
+        "\nNextOrder Start: ",
+        nextOrderStart.toLocaleString(),
+        "\nendLimit: ",
+        endLimit.toLocaleString()
+      );
     }
-
 
     // Define acceptable overlap (in minutes) -- the extra overlap allowed in the gap calculation
     const acceptableOverlap = 10;
     const acceptableOverlapMs = acceptableOverlap * 60000;
 
-   
-   // Ensure that the order is possible to fit within the gap
-   if(startLimit && endLimit){
+    // Ensure that the order is possible to fit within the gap
+    if (startLimit && endLimit) {
       const availableGapMs = endLimit.getTime() - startLimit.getTime();
-      
+
       const diffMs = availableGapMs - curOrderDurationMs;
-      console.log("Overlap: ", diffMs)
-      if(diffMs < -acceptableOverlapMs){
+      console.log("Overlap: ", diffMs);
+      if (diffMs < -acceptableOverlapMs) {
         return res.status(409).json({
           success: false,
-          message: "Booking collision: Cannot accommodate the booking."
+          message: "Booking collision: Cannot accommodate the booking.",
         });
       }
-   }
+    }
 
-   // Nudge the order start_date to adjust if necessary
-   if(startLimit && curOrderStart < startLimit){ // HEAD CLASH
-    const date = startLimit
-    console.log("HEAD COLLISION - Suggested Start: ", date.toLocaleString())
-    return res.status(409).json({
-      success: false,
-      message: `Booking collision (HEAD): Suggested new start_date is ${date.toLocaleString()}`
-    });
-  }else if(endLimit && curOrderEnd > endLimit){
-    
-    const date = startLimit ? startLimit : new Date(endLimit.getTime() - curOrderDurationMs)
-    console.log("TAIL COLLISION - Suggested Start: ", date.toLocaleString())
-    return res.status(409).json({
-      success: false,
-      message: `Booking collision (TAIL): Suggested new start_date is ${date.toLocaleString()}`
-    }); 
-   }
+    // Nudge the order start_date to adjust if necessary
+    if (startLimit && curOrderStart < startLimit) {
+      // HEAD CLASH
+      const date = startLimit;
+      console.log("HEAD COLLISION - Suggested Start: ", date.toLocaleString());
+      return res.status(409).json({
+        success: false,
+        message: `Booking collision (HEAD): Suggested new start_date is ${date.toLocaleString()}`,
+      });
+    } else if (endLimit && curOrderEnd > endLimit) {
+      const date = startLimit
+        ? startLimit
+        : new Date(endLimit.getTime() - curOrderDurationMs);
+      console.log("TAIL COLLISION - Suggested Start: ", date.toLocaleString());
+      return res.status(409).json({
+        success: false,
+        message: `Booking collision (TAIL): Suggested new start_date is ${date.toLocaleString()}`,
+      });
+    }
 
-   const orderResult = await client.query(
-    `INSERT INTO orders (
+    const orderResult = await client.query(
+      `INSERT INTO orders (
         customer_id, chef_id, recipe_id, total_price, status, type,
         start_date_time, end_date_time, latitude, longitude, chef_latitude, chef_longitude
      )
      VALUES ($1, $2, $3, $4, 'PENDING', 'ADVANCE', $5, $6, $7, $8, null, null)
      RETURNING order_id`,
-    [customer_id, chef_id, recipe_id, recipe.price, start_date, curOrderEnd, latitude, longitude]
-  );
+      [
+        customer_id,
+        chef_id,
+        recipe_id,
+        recipe.price,
+        start_date,
+        curOrderEnd,
+        latitude,
+        longitude,
+      ]
+    );
 
-  
-  
-   
-   return res.status(200).json({
-    success: true,
-    message: `Order Placed!!`
-   })
-
+    return res.status(200).json({
+      success: true,
+      message: `Order Placed!!`,
+    });
 
     // NO CLASH, GO AHEAD AND CREATE THE ORDER
-  } catch(err){
-
-    console.error("Error advance booking: ", err)
+  } catch (err) {
+    console.error("Error advance booking: ", err);
 
     return res.status(500).json({
       success: false,
       message: err.message || "Error processing your advance booking",
-    }); 
+    });
   }
-})
+});
 
 // Helper: Get ETA (in minutes) using Google Distance Matrix API
 const getETA = async (origin, destination, departureDate) => {
   const departureTimeSec = Math.floor(new Date(departureDate));
   const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin.lat},${origin.long}&destinations=${destination.lat},${destination.long}&departure_time=${departureTimeSec}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
-  
+
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error('Failed to fetch data from Google Distance Matrix API');
+    throw new Error("Failed to fetch data from Google Distance Matrix API");
   }
 
-  const data = await response.json(); 
-  console.log("ETA response: ",data)
+  const data = await response.json();
+  console.log("ETA response: ", data);
   // Convert seconds to minutes.
   return data.rows[0].elements[0].duration.value / 60;
 };
-
 
 module.exports = router;

@@ -9,14 +9,15 @@ import { initFlowbite } from "flowbite";
 import getImgUrl from "../../../utils/images";
 
 const ManageChefOrders = ({ chef_id }) => {
-  const [refresh, setReferesh] = useState(false)
+  const [refresh, setReferesh] = useState(false);
   const [status, setStatus] = useState("");
-  const [orderstatus,setOrderstatus] = useState("");
+  const [orderstatus, setOrderstatus] = useState("");
   const [completedOrders, setCompletedOrders] = useState([]);
   const [completedRecipes, setCompletedRecipes] = useState([]);
   const [instantBookingNotification, setInstantBookingNotification] =
     useState(null);
-    const [latestCancelNotification,setLatestCancelNotification] = useState(null);
+  const [latestCancelNotification, setLatestCancelNotification] =
+    useState(null);
   const [locationName, setLocationName] = useState("Loading location...");
   const [orderLocationName, setOrderLocationName] = useState("");
   const { notifications, clearNotification } = useNotification();
@@ -52,7 +53,6 @@ const ManageChefOrders = ({ chef_id }) => {
 
   const getLocName = async (lat, lng) => {
     try {
-      
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`
       );
@@ -62,15 +62,15 @@ const ManageChefOrders = ({ chef_id }) => {
       if (data.status === "OK" && data.results.length > 0) {
         console.log("Geocoded data", data);
         const locName = getAllSublocalityNames(data.results);
-        return locName
+        return locName;
       } else {
         return "Unknown Location";
       }
     } catch (error) {
       console.error("Error fetching location:", error);
       return "Unknown Location";
-    } 
-  }
+    }
+  };
 
   // Reverse Geocode to get the address
   const reverseGeocode = async (lat, lng) => {
@@ -230,7 +230,6 @@ const ManageChefOrders = ({ chef_id }) => {
       };
     }
   }, [notifications]);
-
 
   // const handleReject = (notif_id) => {
 
@@ -419,51 +418,53 @@ const ManageChefOrders = ({ chef_id }) => {
   };
 
   const fetchOrder = async (chef_id) => {
-  if (!chef_id) {
-    console.warn("⚠️ Missing required data to fetch the order.");
-    toast.error("Missing required data to fetch the order.");
-    return;
-  }
-
-  try {
-    console.log("🔹 Fetching orders for chef_id:", chef_id);
-    
-    const result = await APIService.fetchCurrentInstantOrderByChefId(chef_id);
-
-    if (!result || result.length === 0) {
-      console.warn("ℹ️ No pending orders found.");
-      setOrderData(null);
-      toast.info("No pending orders found.");
+    if (!chef_id) {
+      console.warn("⚠️ Missing required data to fetch the order.");
+      toast.error("Missing required data to fetch the order.");
       return;
     }
 
-    console.log("✅ Order Data Fetched:", result);
+    try {
+      console.log("🔹 Fetching orders for chef_id:", chef_id);
 
-    // Fetch locations for all orders in parallel
-    const ordersWithLocation = await Promise.all(
-      result.map(async (order) => {
-        try {
-          const locName = await getLocName(order.latitude, order.longitude);
-          return { ...order, location: locName }; // Add location to order data
-        } catch (error) {
-          console.error(`❌ Error fetching location for order ${order.order_id}:`, error);
-          return { ...order, location: "Unknown location" }; // Default if error occurs
-        }
-      })
-    );
+      const result = await APIService.fetchCurrentInstantOrderByChefId(chef_id);
 
-    setOrderData(ordersWithLocation);
-  } catch (error) {
-    console.error("❌ Unexpected error fetching orders:", error);
+      if (!result || result.length === 0) {
+        console.warn("ℹ️ No pending orders found.");
+        setOrderData(null);
+        toast.info("No pending orders found.");
+        return;
+      }
 
-    // if (error.message !== "No orders found") {
-    //   toast.error("An error occurred while fetching orders.");
-    // }
+      console.log("✅ Order Data Fetched:", result);
 
-    setOrderData(null);
-  }
-};
+      // Fetch locations for all orders in parallel
+      const ordersWithLocation = await Promise.all(
+        result.map(async (order) => {
+          try {
+            const locName = await getLocName(order.latitude, order.longitude);
+            return { ...order, location: locName }; // Add location to order data
+          } catch (error) {
+            console.error(
+              `❌ Error fetching location for order ${order.order_id}:`,
+              error
+            );
+            return { ...order, location: "Unknown location" }; // Default if error occurs
+          }
+        })
+      );
 
+      setOrderData(ordersWithLocation);
+    } catch (error) {
+      console.error("❌ Unexpected error fetching orders:", error);
+
+      // if (error.message !== "No orders found") {
+      //   toast.error("An error occurred while fetching orders.");
+      // }
+
+      setOrderData(null);
+    }
+  };
 
   useEffect(() => {
     // console.log("Received chef_id in ManageChefOrders:", chef_id);
@@ -471,11 +472,9 @@ const ManageChefOrders = ({ chef_id }) => {
     fetchOrder(id);
   }, []);
 
-
   const handleComplete = async (order_id) => {
-    
-    if(!order_id) toast.error("Order ID required") 
-    
+    if (!order_id) toast.error("Order ID required");
+
     try {
       const result = await APIService.updateInstantBookStatus(
         order_id,
@@ -500,13 +499,11 @@ const ManageChefOrders = ({ chef_id }) => {
     }
   };
 
-  const handleAdvanceComplete = async(order_id) => {
+  const handleAdvanceComplete = async (order_id) => {
+    if (!order_id) toast.error("Order ID required");
 
-    if(!order_id) toast.error("Order ID required") 
-
-    
     try {
-      const result = await APIService.completeAdvanceBooking(order_id)
+      const result = await APIService.completeAdvanceBooking(order_id);
       console.log("Complete response:", result);
 
       if (result.success) {
@@ -518,16 +515,14 @@ const ManageChefOrders = ({ chef_id }) => {
       console.error("Error completing the order:", error);
       toast.error("Error completing the order.");
     } finally {
-      setReferesh(prev => !prev)
+      setReferesh((prev) => !prev);
     }
-  }
-  const handleAdvanceCancel = async(order_id) => {
+  };
+  const handleAdvanceCancel = async (order_id) => {
+    if (!order_id) toast.error("Order ID required");
 
-    if(!order_id) toast.error("Order ID required") 
-
-    
     try {
-      const result = await APIService.cancelAdvanceBooking(order_id)
+      const result = await APIService.cancelAdvanceBooking(order_id);
       console.log("Cancel response:", result);
 
       if (result.success) {
@@ -539,16 +534,14 @@ const ManageChefOrders = ({ chef_id }) => {
       console.error("Error cancelling the order:", error);
       toast.error("Error cancelling the order.");
     } finally {
-      setReferesh(prev => !prev)
+      setReferesh((prev) => !prev);
     }
-  }
-  const handleAdvanceAccept = async(order_id) => {
+  };
+  const handleAdvanceAccept = async (order_id) => {
+    if (!order_id) toast.error("Order ID required");
 
-    if(!order_id) toast.error("Order ID required") 
-
-    
     try {
-      const result = await APIService.cancelAdvanceBooking(order_id)
+      const result = await APIService.confirmAdvanceBooking(order_id);
       console.log("Accept response:", result);
 
       if (result.success) {
@@ -560,16 +553,14 @@ const ManageChefOrders = ({ chef_id }) => {
       console.error("Error accepting the order:", error);
       toast.error("Error accepting the order.");
     } finally {
-      setReferesh(prev => !prev)
+      setReferesh((prev) => !prev);
     }
-  }
-  const handleAdvanceReject = async(order_id) => {
+  };
+  const handleAdvanceReject = async (order_id) => {
+    if (!order_id) toast.error("Order ID required");
 
-    if(!order_id) toast.error("Order ID required") 
-
-    
     try {
-      const result = await APIService.cancelAdvanceBooking(order_id)
+      const result = await APIService.cancelAdvanceBooking(order_id);
       console.log("Reject response:", result);
 
       if (result.success) {
@@ -581,16 +572,12 @@ const ManageChefOrders = ({ chef_id }) => {
       console.error("Error rejecting the order:", error);
       toast.error("Error rejecting the order.");
     } finally {
-      setReferesh(prev => !prev)
-
+      setReferesh((prev) => !prev);
     }
-  }
-
-
+  };
 
   const handleCancel = async (order_id) => {
-    
-    if(!order_id) toast.error("Order ID required")
+    if (!order_id) toast.error("Order ID required");
 
     try {
       const result = await APIService.updateInstantBookStatus(
@@ -609,36 +596,41 @@ const ManageChefOrders = ({ chef_id }) => {
       }
     } catch (error) {
       console.error("Error cancelling the order:", error);
-      toast.error( "Error cancelling the order.");
+      toast.error("Error cancelling the order.");
     } finally {
       const id = auth.currentUser.uid;
       fetchOrder(id);
     }
   };
 
-  const [todaysOrders, setTodaysOrders] = useState([])
-  const [pendingOrders, setPendingOrders] = useState([])
+  const [todaysOrders, setTodaysOrders] = useState([]);
+  const [pendingOrders, setPendingOrders] = useState([]);
   useEffect(() => {
     const fetchCompletedOrdersAndRecipes = async () => {
       try {
         // Fetch completed orders using APIService
         const orders = await APIService.fetchAllOrdersByChefId(chef_id);
-        
+
         if (orders.length === 0) return;
 
-        orders?.sort((a, b)=> new Date(b.order_date) - new Date(a.order_date));
+        orders?.sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
 
-        const ordersForToday = orders.filter( order => {
-          const date = new Date(order.start_date_time)
-          return date.toLocaleDateString() === new Date().toLocaleDateString() && !['COMPLETED', 'CANCELLED'].includes(order.status)
-        })
+        const ordersForToday = orders.filter((order) => {
+          const date = new Date(order.start_date_time);
+          return (
+            date.toLocaleDateString() === new Date().toLocaleDateString() &&
+            !["COMPLETED", "CANCELLED"].includes(order.status)
+          );
+        });
 
-        const pendOrders = orders.filter( order => order.type === 'ADVANCE' && order.status === 'PENDING')
+        const pendOrders = orders.filter(
+          (order) => order.type === "ADVANCE" && order.status === "PENDING"
+        );
 
         setCompletedOrders(orders);
         setTodaysOrders(ordersForToday);
-        setPendingOrders(pendOrders)
-        console.log("Orders for Today: ", ordersForToday)
+        setPendingOrders(pendOrders);
+        console.log("Orders for Today: ", ordersForToday);
 
         // // Fetch recipes for each order
         // const recipePromises = orders.map((order) =>
@@ -650,17 +642,19 @@ const ManageChefOrders = ({ chef_id }) => {
         // setCompletedRecipes(recipes);
 
         //Fetch customer details using customer_id
-      //   const uniqueCustomerIds = [...new Set(orders.map((order) => order.customer_id))];
-        
-      //    // Fetch customer details in parallel
-      // const customerPromises = uniqueCustomerIds.map((id) => APIService.getCustomerById(id));
-      // const customers = await Promise.all(customerPromises);
+        //   const uniqueCustomerIds = [...new Set(orders.map((order) => order.customer_id))];
 
-      //  // Store customer data
-      //  setCustomerData(customers);
+        //    // Fetch customer details in parallel
+        // const customerPromises = uniqueCustomerIds.map((id) => APIService.getCustomerById(id));
+        // const customers = await Promise.all(customerPromises);
 
+        //  // Store customer data
+        //  setCustomerData(customers);
       } catch (error) {
-        console.error("Error fetching completed orders, recipes and customers :", error);
+        console.error(
+          "Error fetching completed orders, recipes and customers :",
+          error
+        );
       }
     };
 
@@ -669,11 +663,7 @@ const ManageChefOrders = ({ chef_id }) => {
     }
   }, [chef_id, orderData, refresh]);
 
-
-
- 
-
-  console.log('order status',orderstatus)
+  console.log("order status", orderstatus);
   // console.log("completed orders..", completedOrders);
   // console.log("completed recipes..", completedRecipes);
 
@@ -682,7 +672,20 @@ const ManageChefOrders = ({ chef_id }) => {
       <h1 className="font-semibold text-xl text-gray-500">Overview</h1>
 
       <div className="w-full flex items-end justify-between p-10">
-      <h3>Current Status: <span className={`${status === "READY" ? "text-green-500" : status === "BUSY" ? "text-red-500" : ""}`}>{status ? status : "Not Set"}</span></h3>
+        <h3>
+          Current Status:{" "}
+          <span
+            className={`${
+              status === "READY"
+                ? "text-green-500"
+                : status === "BUSY"
+                ? "text-red-500"
+                : ""
+            }`}
+          >
+            {status ? status : "Not Set"}
+          </span>
+        </h3>
         <button
           onClick={() => {
             const nextStatus = status === "READY" ? "BUSY" : "READY"; // Toggle between READY and BUSY
@@ -704,7 +707,9 @@ const ManageChefOrders = ({ chef_id }) => {
             {/* Instant Order Card with notification details */}
             <OrderCard
               timeRemaining={ttl}
-              imageUrl={getImgUrl(parseInt(instantBookingNotification.data.recipe_id, 10)|| -1)}
+              imageUrl={getImgUrl(
+                parseInt(instantBookingNotification.data.recipe_id, 10) || -1
+              )}
               title={instantBookingNotification.data.recipe_title || ""}
               description={instantBookingNotification.body}
               recipeId={instantBookingNotification.data.recipe_id}
@@ -725,36 +730,40 @@ const ManageChefOrders = ({ chef_id }) => {
             {/* Map displaying customer location */}
             <div className="w-full border rounded-lg overflow-hidden">
               <MapsCard
-                latitude={parseFloat(instantBookingNotification.data.latitude) || 0}
-                longitude={parseFloat(instantBookingNotification.data.longitude) || 0}
+                latitude={
+                  parseFloat(instantBookingNotification.data.latitude) || 0
+                }
+                longitude={
+                  parseFloat(instantBookingNotification.data.longitude) || 0
+                }
               />
             </div>
           </div>
-        ) : orderData?.length > 0 ? orderData.map( order => (
-          <div className="flex gap-2 w-full">
-          {/* Instant Order Card for fetched orderData */}
-          <OrderCard
-            title={`Order ${order?.title}`}
-            description={`Total Price: ₹${order.total_price}`}
-            recipeId={order?.recipe_id}
-            customerId={order?.customer_id}
-            location={order?.location}
-            onComplete={() => handleComplete(order.order_id)}
-            onCancel={() => handleCancel(order.order_id)}
-            active={false}
-            UserStatus={orderstatus}
-            type={order?.type}
-          />
-          <div className="w-full border rounded-lg overflow-hidden">
-            <MapsCard
-              latitude={parseFloat(order?.latitude) || 0}
-              longitude={parseFloat(order?.longitude) || 0}
-            />
-          </div>
-        </div>
-        ))
-        
-         : (
+        ) : orderData?.length > 0 ? (
+          orderData.map((order) => (
+            <div className="flex gap-2 w-full">
+              {/* Instant Order Card for fetched orderData */}
+              <OrderCard
+                title={`Order ${order?.title}`}
+                description={`Total Price: ₹${order.total_price}`}
+                recipeId={order?.recipe_id}
+                customerId={order?.customer_id}
+                location={order?.location}
+                onComplete={() => handleComplete(order.order_id)}
+                onCancel={() => handleCancel(order.order_id)}
+                active={false}
+                UserStatus={orderstatus}
+                type={order?.type}
+              />
+              <div className="w-full border rounded-lg overflow-hidden">
+                <MapsCard
+                  latitude={parseFloat(order?.latitude) || 0}
+                  longitude={parseFloat(order?.longitude) || 0}
+                />
+              </div>
+            </div>
+          ))
+        ) : (
           <div className="w-full text-center text-gray-500 py-10">
             <h2 className="text-lg">📭 You have no instant orders.</h2>
           </div>
@@ -762,78 +771,75 @@ const ManageChefOrders = ({ chef_id }) => {
       </div>
       <h1 className="font-normal text-xl text-gray-500">Today's Orders</h1>
 
-      { todaysOrders.length > 0 ? todaysOrders.map(
-        order => (
+      {todaysOrders.length > 0 ? (
+        todaysOrders.map((order) => (
           <div className="flex gap-2 w-full">
-          {/* Instant Order Card for fetched orderData */}
-          <OrderCard
-            imageUrl={getImgUrl(order.recipe_id)}
-            title={order?.title}
-            description={`Total Price: ₹${order.total_price}`}
-            recipeId={order?.recipe_id}
-            customerId={order?.customer_id}
-            location={order?.location}
-            onComplete={() => handleAdvanceComplete(order.order_id)}
-            onCancel={() => handleAdvanceCancel(order.order_id)}
-            active={false}
-            date={new Date(order.start_date_time).toLocaleDateString()}
-            startTime={new Date(order.start_date_time).toLocaleTimeString()}
-            endTime={new Date(order.end_date_time).toLocaleTimeString()}
-            // UserStatus={orderstatus}
-            type={order?.type}
-          />
-          <div className="w-full border rounded-lg overflow-hidden">
+            {/* Instant Order Card for fetched orderData */}
+            <OrderCard
+              imageUrl={getImgUrl(order.recipe_id)}
+              title={order?.title}
+              description={`Total Price: ₹${order.total_price}`}
+              recipeId={order?.recipe_id}
+              customerId={order?.customer_id}
+              location={order?.location}
+              onComplete={() => handleAdvanceComplete(order.order_id)}
+              onCancel={() => handleAdvanceCancel(order.order_id)}
+              active={false}
+              date={new Date(order.start_date_time).toLocaleDateString()}
+              startTime={new Date(order.start_date_time).toLocaleTimeString()}
+              endTime={new Date(order.end_date_time).toLocaleTimeString()}
+              // UserStatus={orderstatus}
+              type={order?.type}
+            />
+            <div className="w-full border rounded-lg overflow-hidden">
               <MapsCard
                 latitude={parseFloat(order?.latitude) || 0}
                 longitude={parseFloat(order?.longitude) || 0}
               />
+            </div>
           </div>
-        </div>
-        )
+        ))
       ) : (
         <div className="w-full text-center text-gray-500 py-10">
-            <h2 className="text-lg">📭 You have no orders for today.</h2>
-      </div>
-      )
-      }
+          <h2 className="text-lg">📭 You have no orders for today.</h2>
+        </div>
+      )}
 
-      <hr className="my-10 border-gray-200"/>
+      <hr className="my-10 border-gray-200" />
       <h1 className="font-normal text-xl text-gray-500 mb-5">Pending orders</h1>
 
-      { pendingOrders.length > 0 ? pendingOrders.map(
-        order => (
+      {pendingOrders.length > 0 ? (
+        pendingOrders.map((order) => (
           <div className="flex gap-2 w-full">
-          {/* Instant Order Card for fetched orderData */}
-          <OrderCard
-            title={order?.title}
-            imageUrl={getImgUrl(order.recipe_id)}
-            description={`Total Price: ₹${order.total_price}`}
-            recipeId={order?.recipe_id}
-            customerId={order?.customer_id}
-            location={order?.location}
-            onAccept={()=>handleAdvanceAccept(order.order_id)}
-            onReject={()=>handleAdvanceReject(order.order_id)}
-            active={true}
-            // UserStatus={orderstatus}
-            date={new Date(order.start_date_time).toLocaleDateString()}
-            startTime={new Date(order.start_date_time).toLocaleTimeString()}
-            endTime={new Date(order.end_date_time).toLocaleTimeString()}
-          />
-          <div className="w-full border rounded-lg overflow-hidden">
-            <MapsCard
-              latitude={parseFloat(order?.latitude) || 0}
-              longitude={parseFloat(order?.longitude) || 0}
+            {/* Instant Order Card for fetched orderData */}
+            <OrderCard
+              title={order?.title}
+              imageUrl={getImgUrl(order.recipe_id)}
+              description={`Total Price: ₹${order.total_price}`}
+              recipeId={order?.recipe_id}
+              customerId={order?.customer_id}
+              location={order?.location}
+              onAccept={() => handleAdvanceAccept(order.order_id)}
+              onReject={() => handleAdvanceReject(order.order_id)}
+              active={true}
+              // UserStatus={orderstatus}
+              date={new Date(order.start_date_time).toLocaleDateString()}
+              startTime={new Date(order.start_date_time).toLocaleTimeString()}
+              endTime={new Date(order.end_date_time).toLocaleTimeString()}
             />
+            <div className="w-full border rounded-lg overflow-hidden">
+              <MapsCard
+                latitude={parseFloat(order?.latitude) || 0}
+                longitude={parseFloat(order?.longitude) || 0}
+              />
+            </div>
           </div>
-        </div>
-        )
+        ))
       ) : (
         <div className="w-full text-center text-gray-500 py-10">
-            <h2 className="text-lg">📭 You have no PENDING orders.</h2>
-      </div>
-      )
-      }
-      
+          <h2 className="text-lg">📭 You have no PENDING orders.</h2>
+        </div>
+      )}
 
       <h1 className="font-normal text-xl text-gray-500">Order History</h1>
       <Table
@@ -847,29 +853,26 @@ const ManageChefOrders = ({ chef_id }) => {
 export default ManageChefOrders;
 
 const Table = ({ completedOrders = [], completedRecipes = [] }) => {
-  const [customerData,setCustomerData] = useState([]);
+  const [customerData, setCustomerData] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
 
-  useEffect(()=>{
+  useEffect(() => {
     initFlowbite();
-  },[])
+  }, []);
 
-  const handleView =  async (order) => {
+  const handleView = async (order) => {
     try {
       const result = await APIService.getCustomerById(order?.customer_id);
       if (result) {
-        setCustomerData(result)
+        setCustomerData(result);
       }
-      setCurrentOrder(order)
+      setCurrentOrder(order);
     } catch (error) {
-      toast.error("Error fetching order details")
+      toast.error("Error fetching order details");
     }
-    
-  }
+  };
 
-  
-
-console.log('customerdata',customerData)
+  console.log("customerdata", customerData);
 
   return (
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg p-2">
@@ -913,7 +916,7 @@ console.log('customerdata',customerData)
                   href="#"
                   class="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 dark:hover:text-white"
                 >
-                  Show only 
+                  Show only
                 </a>
               </li>
               <li>
@@ -1010,15 +1013,21 @@ console.log('customerdata',customerData)
         <tbody>
           {completedOrders.map((order, index) => {
             // Flatten the completedRecipes array (if it's an array of arrays)
-            {/* const flattenedRecipes = completedRecipes.flat(); */}
+            {
+              /* const flattenedRecipes = completedRecipes.flat(); */
+            }
 
             // Find the recipe based on recipe_id
-            {/* const recipe = flattenedRecipes.find(
+            {
+              /* const recipe = flattenedRecipes.find(
               (recipe) => recipe.recipe_id === order.recipe_id
-            ); */}
+            ); */
+            }
 
             // Log the recipe for debugging
-            {/* console.log("Recipe:", recipe); */}
+            {
+              /* console.log("Recipe:", recipe); */
+            }
             return (
               <tr
                 key={index}
@@ -1070,11 +1079,15 @@ console.log('customerdata',customerData)
                   <div class="flex items-center">
                     <div
                       class={`${
-                        order.status === "COMPLETED" ? "bg-green-500" 
-                        : order.status === "CONFIRMED" ? "bg-purple-500"
-                        : order.status === "PENDING" ? "bg-yellow-300" 
-                        : order.status === "CANCELLED" ? "bg-red-500" 
-                        : "bg-gray-500"
+                        order.status === "COMPLETED"
+                          ? "bg-green-500"
+                          : order.status === "CONFIRMED"
+                          ? "bg-purple-500"
+                          : order.status === "PENDING"
+                          ? "bg-yellow-300"
+                          : order.status === "CANCELLED"
+                          ? "bg-red-500"
+                          : "bg-gray-500"
                       } h-2.5 w-2.5 rounded-full me-2`}
                     ></div>{" "}
                     {order?.status}
@@ -1084,12 +1097,12 @@ console.log('customerdata',customerData)
                 </td>
                 <td class="px-6 py-4">
                   <a
-                  href="#"
+                    href="#"
                     type="button"
                     data-modal-target="editUserModal"
                     data-modal-show="editUserModal"
                     class="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                    onClick={()=>handleView(order)}
+                    onClick={() => handleView(order)}
                   >
                     View
                   </a>
@@ -1138,7 +1151,7 @@ console.log('customerdata',customerData)
 
             <div class="p-6 space-y-6">
               <div class="grid grid-cols-6 gap-6">
-              <div class="col-span-6 sm:col-span-3">
+                <div class="col-span-6 sm:col-span-3">
                   <label
                     for="phone-number"
                     class="block mb-2 text-sm font-medium text-gray-500 dark:text-white"
@@ -1152,7 +1165,7 @@ console.log('customerdata',customerData)
                     for="address"
                     class="block mb-2 text-sm font-medium text-gray-500  dark:text-white"
                   >
-                   Recipe
+                    Recipe
                   </label>
                   {/* <input
                    value={customerData.address || "N/A"}
@@ -1166,7 +1179,6 @@ console.log('customerdata',customerData)
                   <p>{currentOrder?.title || ""}</p>
                 </div>
 
-
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="customer-fullname"
@@ -1176,8 +1188,7 @@ console.log('customerdata',customerData)
                   </label>
                   <p>{customerData.full_name}</p>
                 </div>
-               
-               
+
                 <div class="col-span-6 sm:col-span-3">
                   <label
                     for="email"
@@ -1215,7 +1226,9 @@ console.log('customerdata',customerData)
                   >
                     Order Placed Date
                   </label>
-                  <p>{new Date(currentOrder?.order_date).toLocaleDateString()}</p>
+                  <p>
+                    {new Date(currentOrder?.order_date).toLocaleDateString()}
+                  </p>
                 </div>
 
                 <div class="col-span-6 sm:col-span-3">
@@ -1226,15 +1239,19 @@ console.log('customerdata',customerData)
                     STATUS
                   </label>
                   <div
-                      class={`${
-                        currentOrder?.status === "COMPLETED" ? "bg-green-500" 
-                        : currentOrder?.status === "CONFIRMED" ? "bg-purple-500"
-                        : currentOrder?.status === "PENDING" ? "bg-yellow-300" 
-                        : currentOrder?.status === "CANCELLED" ? "bg-red-500" 
+                    class={`${
+                      currentOrder?.status === "COMPLETED"
+                        ? "bg-green-500"
+                        : currentOrder?.status === "CONFIRMED"
+                        ? "bg-purple-500"
+                        : currentOrder?.status === "PENDING"
+                        ? "bg-yellow-300"
+                        : currentOrder?.status === "CANCELLED"
+                        ? "bg-red-500"
                         : "bg-gray-500"
-                      } h-2.5 w-2.5 rounded-full me-2 inline-block`}
-                    ></div>{" "}
-                    {currentOrder?.status}
+                    } h-2.5 w-2.5 rounded-full me-2 inline-block`}
+                  ></div>{" "}
+                  {currentOrder?.status}
                 </div>
 
                 <div class="col-span-6 sm:col-span-3">
@@ -1244,7 +1261,9 @@ console.log('customerdata',customerData)
                   >
                     Start Date Time
                   </label>
-                  <p>{new Date(currentOrder?.start_date_time).toLocaleString()}</p>
+                  <p>
+                    {new Date(currentOrder?.start_date_time).toLocaleString()}
+                  </p>
                 </div>
 
                 <div class="col-span-6 sm:col-span-3">
@@ -1254,11 +1273,10 @@ console.log('customerdata',customerData)
                   >
                     End Date Time
                   </label>
-                  <p>{new Date(currentOrder?.end_date_time).toLocaleString()}</p>
+                  <p>
+                    {new Date(currentOrder?.end_date_time).toLocaleString()}
+                  </p>
                 </div>
-
-               
-                
               </div>
             </div>
 

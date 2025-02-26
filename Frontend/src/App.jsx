@@ -37,36 +37,33 @@ import "react-toastify/dist/ReactToastify.css";
 import UserOrder from "./pages/User/ManageUserOrders/UserOrder";
 import OrderPage from "./pages/User/ManageUserOrders/OrderPage";
 import InstantOrderStatus from "./pages/User/ManageUserOrders/InstantOrderStatus";
-
+import AdvancedOrderPage from "./pages/User/ManageUserOrders/AdvancedOrderPage";
 
 function App() {
   const navigate = useNavigate();
   const [userType, setUserType] = useState(null);
-  const [userId,setUserId] = useState('')
+  const [userId, setUserId] = useState("");
 
   // const [isLoggedIn, setIsLoggedIn] = useState(false);
   // const [curUser, setCurUser] = useState(null);
 
-  const { user, loading, getUserType,logout } = useAuth();
-  const { requestPermission ,removePermission} = useNotification();
+  const { user, loading, getUserType, logout } = useAuth();
+  const { requestPermission, removePermission } = useNotification();
 
   useEffect(() => {
     initFlowbite();
   }, []);
 
   useEffect(() => {
-  if (!loading && user) {
-    console.log("User: ", user);
-    const uid = user.uid;
-    setUserId(uid);
-    console.log('useruid', userId);
-    requestPermission(uid);
-  }
-}, [user, loading,requestPermission]);
+    if (!loading && user) {
+      console.log("User: ", user);
+      const uid = user.uid;
+      setUserId(uid);
+      console.log("useruid", userId);
+      requestPermission(uid);
+    }
+  }, [user, loading, requestPermission]);
 
-
-
-  
   const curUser = useMemo(() => user, [user]); // Memoize user data
   const isLoggedIn = useMemo(() => !!user, [user]); // Avoid re-computation
 
@@ -74,7 +71,6 @@ function App() {
   //   console.log("Requesting notif permission")
 
   //     requestPermission(auth.currentUser.uid);
-
 
   // }, []);
 
@@ -91,19 +87,32 @@ function App() {
     fetchUserType();
   }, [user, getUserType]);
 
- 
-
   return (
     <>
       <div>
         <ToastContainer />
         <Routes>
           {/* Main Layout */}
-          <Route element={<MainLayout userType={userType} removePermission={removePermission} userId={userId} />}>
+          <Route
+            element={
+              <MainLayout
+                userType={userType}
+                removePermission={removePermission}
+                userId={userId}
+              />
+            }
+          >
             <Route path="/" element={<HomePage />} />
-            <Route path="recipe/:id" element={<UserOrder/>}/>
-            <Route path="instant-order" element={<InstantOrderStatus customer_id={userId}/>}/> 
-            <Route path="myorders" element={<OrderPage customer_id={userId}/>}/>
+            <Route path="recipe/:id" element={<UserOrder />} />
+            <Route
+              path="instant-order"
+              element={<InstantOrderStatus customer_id={userId} />}
+            />
+            <Route
+              path="myorders"
+              element={<OrderPage customer_id={userId} />}
+            />
+            <Route path="advanced-order" element={<AdvancedOrderPage />} />
 
             <Route element={<ProtectedRoute />}>
               <Route
@@ -112,7 +121,10 @@ function App() {
               >
                 <Route path="chef" element={<ChefDashboard />}>
                   <Route index element={<Navigate to="orders" replace />} />
-                  <Route path="orders" element={<ManageChefOrders chef_id={userId}/>} />
+                  <Route
+                    path="orders"
+                    element={<ManageChefOrders chef_id={userId} />}
+                  />
                   <Route path="recipe" element={<ManageChefRecipes />} />
                 </Route>
                 <Route path="admin" element={<AdminDashboard />}>
@@ -121,8 +133,6 @@ function App() {
                   <Route path="customers" element={<ManageCustomers />} />
                   <Route path="orders" element={<ManageOrders />} />
                 </Route>
-               
-               
               </Route>
             </Route>
 
@@ -135,7 +145,7 @@ function App() {
                 ) : userType === "ADMIN" ? (
                   <Navigate to="/dashboard/admin" replace />
                 ) : userType === "USER" ? (
-                  <HomePage/>
+                  <HomePage />
                 ) : null
               }
             />

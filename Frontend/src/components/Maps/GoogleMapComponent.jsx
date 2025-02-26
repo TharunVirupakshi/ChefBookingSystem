@@ -7,13 +7,10 @@ const containerStyle = {
 };
 
 const GoogleMapComponent = ({ defaultLocation, onLocationSelect }) => {
-  const [selectedLocation, setSelectedLocation] = useState(
-    defaultLocation.lat,
-    defaultLocation.long
-  );
+  const [selectedLocation, setSelectedLocation] = useState(defaultLocation);
 
   useEffect(() => {
-    setSelectedLocation(defaultLocation);
+    setSelectedLocation(defaultLocation); // Ensure map starts at default location
   }, [defaultLocation]);
 
   const handleMapClick = useCallback(

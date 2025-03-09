@@ -212,7 +212,7 @@ const AdvancedOrderPage = () => {
 
         {/* Show selected location */}
         <p className="mt-3 text-gray-700">
-          Selected Location: {userGeolocation.lat}, {userGeolocation.long}
+          Selected Location: {userGeolocation.lat}, {userGeolocation.lng}
         </p>
       </div>
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">

@@ -26,7 +26,7 @@ const GoogleMapComponent = ({ defaultLocation, onLocationSelect }) => {
   );
 
   return (
-    <LoadScript googleMapsApiKey="AIzaSyCpCZwxWCyspQPV_CuZLZiVFXg_ZalHPsY">
+    <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_JS_API_KEY}>
       <GoogleMap
         mapContainerStyle={containerStyle}
         center={selectedLocation} // Start at default location

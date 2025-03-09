@@ -1449,6 +1449,164 @@ router.post("/advance", async (req, res) => {
   }
 });
 
+router.get("/check/:id", async (req, res) => {
+  const chef_id = req.body.chef_id;
+  const order_id = req.params.id;
+
+  if (!chef_id || !order_id) {
+    return res.status(400).json({
+      success: false,
+      message: "chef_id and order_id are required",
+    });
+  }
+
+  try {
+    // 1. Fetch the order to check
+    const orderResult = await client.query(
+      `SELECT * FROM orders 
+      WHERE chef_id = $1 
+      AND order_id = $2
+      AND status = 'PENDING'`,
+      [chef_id, order_id]
+    );
+
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found or not in a PENDING state.",
+      });
+    }
+
+    const currentOrder = orderResult.rows[0];
+    const curOrderStart = new Date(currentOrder.start_date_time);
+    const curOrderEnd = new Date(currentOrder.end_date_time);
+    const curOrderDurationMs = curOrderEnd - curOrderStart;
+
+    const latitude = currentOrder.latitude;
+    const longitude = currentOrder.longitude;
+
+    // 2. Fetch ALL other orders on the same day for the chef
+    const remainingOrdersResult = await client.query(
+      `SELECT * FROM orders 
+      WHERE chef_id = $1 
+      AND status = 'PENDING'
+      AND DATE(order_date) = DATE($2)
+      AND order_id != $3
+      ORDER BY start_date_time ASC`,
+      [chef_id, currentOrder.order_date, order_id]
+    );
+
+    const remainingOrders = remainingOrdersResult.rows;
+
+    const clashingOrders = [];
+
+    for (let otherOrder of remainingOrders) {
+      const otherStart = new Date(otherOrder.start_date_time);
+      const otherEnd = new Date(otherOrder.end_date_time);
+
+      // === TIME OVERLAP CHECK ===
+      const isTimeOverlap =
+        curOrderStart < otherEnd && curOrderEnd > otherStart;
+
+      if (isTimeOverlap) {
+        console.log(`Time clash with order ${otherOrder.order_id}`);
+        clashingOrders.push({
+          type: "TIME_OVERLAP",
+          order: otherOrder,
+          details: `Order overlaps with start ${otherStart} to end ${otherEnd}`,
+        });
+        continue; // No need to check travel feasibility if times already clash
+      }
+
+      // === TRAVEL FEASIBILITY CHECK ===
+      let travelClash = false;
+
+      // Case 1: currentOrder is BEFORE otherOrder
+      if (curOrderEnd <= otherStart) {
+        const curEndTime = curOrderEnd;
+        const destLoc = {
+          lat: otherOrder.latitude,
+          long: otherOrder.longitude,
+        };
+
+        const tailETA = await getETA(
+          { lat: latitude, long: longitude },
+          destLoc,
+          curEndTime
+        );
+
+        const arrivalTime = new Date(curEndTime.getTime() + tailETA * 60000);
+
+        if (arrivalTime > otherStart) {
+          travelClash = true;
+          console.log(
+            `Travel clash (too late) to order ${
+              otherOrder.order_id
+            }: arrival at ${arrivalTime.toLocaleString()} after start ${otherStart.toLocaleString()}`
+          );
+        }
+      }
+
+      // Case 2: currentOrder is AFTER otherOrder
+      if (curOrderStart >= otherEnd) {
+        const otherEndTime = otherEnd;
+        const originLoc = {
+          lat: otherOrder.latitude,
+          long: otherOrder.longitude,
+        };
+
+        const headETA = await getETA(
+          originLoc,
+          { lat: latitude, long: longitude },
+          otherEndTime
+        );
+
+        const arrivalTime = new Date(otherEndTime.getTime() + headETA * 60000);
+
+        if (arrivalTime > curOrderStart) {
+          travelClash = true;
+          console.log(
+            `Travel clash (too late) from order ${
+              otherOrder.order_id
+            }: arrival at ${arrivalTime.toLocaleString()} after start ${curOrderStart.toLocaleString()}`
+          );
+        }
+      }
+
+      if (travelClash) {
+        clashingOrders.push({
+          type: "TRAVEL_ISSUE",
+          order: otherOrder,
+          details: `Not enough travel time between orders.`,
+        });
+      }
+    }
+
+    // 3. Return all clashes
+    if (clashingOrders.length > 0) {
+      return res.status(409).json({
+        success: false,
+        message: `Found ${clashingOrders.length} clashing orders.`,
+        clashes: clashingOrders,
+        checkedOrder: currentOrder,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "No clashes found.",
+      checkedOrder: currentOrder,
+    });
+  } catch (error) {
+    console.error("Error checking for clashes:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while checking orders.",
+      error: error.message,
+    });
+  }
+});
+
 // Helper: Get ETA (in minutes) using Google Distance Matrix API
 const getETA = async (origin, destination, departureDate) => {
   const departureTimeSec = Math.floor(new Date(departureDate));

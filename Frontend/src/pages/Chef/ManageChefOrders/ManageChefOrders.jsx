@@ -630,7 +630,7 @@ const ManageChefOrders = ({ chef_id }) => {
 
         const ordersForToday = orders.filter( order => {
           const date = new Date(order.start_date_time)
-          return date.toLocaleDateString() === new Date().toLocaleDateString() && !['COMPLETED', 'CANCELLED'].includes(order.status)
+          return order.type === 'ADVANCE' && date.toLocaleDateString() === new Date().toLocaleDateString() && !['COMPLETED', 'CANCELLED'].includes(order.status)
         })
 
         const pendOrders = orders.filter( order => order.type === 'ADVANCE' && order.status === 'PENDING')
@@ -734,8 +734,9 @@ const ManageChefOrders = ({ chef_id }) => {
           <div className="flex gap-2 w-full">
           {/* Instant Order Card for fetched orderData */}
           <OrderCard
-            title={`Order ${order?.title}`}
+            title={order?.title}
             description={`Total Price: ₹${order.total_price}`}
+            imageUrl={getImgUrl(parseInt(order?.recipe_id))}
             recipeId={order?.recipe_id}
             customerId={order?.customer_id}
             location={order?.location}

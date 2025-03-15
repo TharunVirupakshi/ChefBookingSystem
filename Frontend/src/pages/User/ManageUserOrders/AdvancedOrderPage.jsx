@@ -25,67 +25,59 @@ const AdvancedOrderPage = () => {
       const uid = user.uid;
       setUserId(uid);
       console.log("useruid", userId);
+      setToCurrentLocation()
     }
   }, [user, loading]);
 
-  useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 3; // Maximum number of retry attempts
+  
 
-    const fetchLocation = () => {
-      if (!navigator.geolocation) {
-        alert("Geolocation is not supported by this browser!");
-        return;
-      }
+    const fetchLocation = async () => {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by this browser!");
+    return null;
+  }
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = {
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          };
-          console.log("✅ User location:", loc);
-          setUserGeolocation(loc);
-        },
-        (error) => {
-          console.error("❌ Geolocation error:", error.message);
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              alert(
-                "You denied the location request. Please enable location services."
-              );
-              break;
-            case error.POSITION_UNAVAILABLE:
-              alert("Location information is unavailable. Retrying...");
-              break;
-            case error.TIMEOUT:
-              alert("The request to get user location timed out. Retrying...");
-              break;
-            default:
-              alert("An unknown error occurred.");
-              break;
-          }
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false, // Reduce precision to improve success rate
+        timeout: 15000,            // Extend timeout
+        maximumAge: 10000,         // Use cached location if available
+      });
+    });
 
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(
-              `🔄 Retrying location fetch (${retryCount}/${maxRetries})...`
-            );
-            setTimeout(fetchLocation, 3000); // Wait 3 seconds before retrying
-          } else {
-            alert("Failed to get location after multiple attempts.");
-          }
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
-      );
+    const loc = {
+      lat: position.coords.latitude,
+      long: position.coords.longitude,
     };
 
-    fetchLocation(); // Initial call
-  }, []);
+    console.log("✅ User location:", loc);
+    return loc;
+  } catch (error) {
+    console.error("❌ Geolocation error:", error.message);
+
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        alert("You denied the location request. Please enable location services.");
+        break;
+      case error.POSITION_UNAVAILABLE:
+        alert("Location information is unavailable. Retrying...");
+        break;
+      case error.TIMEOUT:
+        alert("The request to get user location timed out. Retrying...");
+        break;
+      default:
+        alert("An unknown error occurred.");
+        break;
+    }
+
+    toast.error("Unable to fetch location, try again later");
+    return null;
+  }
+};
+
+
+
 
   const adjustToIST = (utcDateTime) => {
     if (!utcDateTime) return null;
@@ -135,6 +127,18 @@ const AdvancedOrderPage = () => {
     }
     return slots;
   };
+
+  const setToCurrentLocation = async() => {
+    try {
+      const loc = await fetchLocation();
+      if(loc) setUserGeolocation(loc)
+    } catch (error) {
+      console.log("Unable to fetch location")
+    }
+  }
+
+  
+
 
   const isTimeBlocked = (time) => {
     // Convert selected time to a Date object for easy comparison
@@ -187,17 +191,17 @@ const AdvancedOrderPage = () => {
         console.log("Request ID:", response.req_id);
         navigate("/myorders", { state: { customer_id: userId } });
       } else {
-        toast.error(response.message || "Failed to place order.");
+        toast.error(response.data.message || "Failed to place order.");
       }
     } catch (error) {
       console.error("Error placing order:", error);
-      toast.error(error?.message || "An error occurred. Please try again.");
+      toast.error(error?.response.data.message || "An error occurred. Please try again.");
     }
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-6">
-      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-6">
+      <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-lg">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">
           Select Your Location
         </h2>

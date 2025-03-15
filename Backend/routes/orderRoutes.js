@@ -229,10 +229,12 @@ router.get("/customer-orders/:customer_id", async (req, res) => {
   try {
     // Query to fetch orders along with recipe details
     const result = await client.query(
-      `SELECT o.*, r.* 
+      `SELECT o.*, r.*, c.full_name as chef_name
        FROM orders o
        JOIN recipe r ON o.recipe_id = r.recipe_id
-       WHERE o.customer_id = $1 AND o.deleted_at IS NULL`,
+       JOIN chef c ON o.chef_id = c.chef_id
+       WHERE o.customer_id = $1 
+       AND o.deleted_at IS NULL`,
       [customer_id]
     );
 
@@ -396,6 +398,7 @@ router.post("/instant", async (req, res) => {
     // 1️⃣ Check if there's already an active request for this chef
     const activeRequestKey = `instant_booking:${chef_id}`;
     const existingRequest = await redisClient.get(activeRequestKey);
+
 
     if (existingRequest) {
       const data = JSON.parse(existingRequest);
@@ -1604,6 +1607,48 @@ router.get("/check/:id", async (req, res) => {
       message: "An error occurred while checking orders.",
       error: error.message,
     });
+  }
+});
+
+router.get("/advance/startorder/:chef_id/:order_id", async (req, res) => {
+  try {
+    const { chef_id, order_id } = req.params;
+
+    if (!chef_id || !order_id) {
+      return res.status(400).json({ error: "Missing chef_id or order_id" });
+    }
+
+    const key = `chef_cur_order:${chef_id}`;
+    
+    await redisClient.set(key, order_id); // Set with a 1-hour expiry
+
+    res.json({success: true, message: "Chef order tracking started", chef_id, order_id });
+  } catch (error) {
+    console.error("Error starting order tracking:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/advance/curorder/:chef_id", async (req, res) => {
+  try {
+    const { chef_id } = req.params;
+
+    if (!chef_id) {
+      return res.status(400).json({ error: "Missing chef_id" });
+    }
+
+    const key = `chef_cur_order:${chef_id}`;
+    
+    const order_id = await redisClient.get(key);
+
+    if (!order_id) {
+      return res.json({ chef_id, order_id: null, message: "No active order found" });
+    }
+
+    res.json({ chef_id, order_id });
+  } catch (error) {
+    console.error("Error retrieving chef's current order:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

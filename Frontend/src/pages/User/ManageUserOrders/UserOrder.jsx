@@ -9,6 +9,9 @@ import { useAuth } from "../../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import APIService from "../../../API/APIService";
 import getImgUrl from "../../../utils/images";
+import { Modal } from "flowbite-react";
+import GoogleMapComponent from "../../../components/Maps/GoogleMapComponent";
+import MapsCard from "../../../components/Maps/MapsCard";
 
 const UserOrder = () => {
   const { user, loading } = useAuth();
@@ -19,6 +22,7 @@ const UserOrder = () => {
   const location = useLocation();
   const [recipeType, setRecipeType] = useState("");
   const [userGeolocation, setUserGeolocation] = useState({ lat: 0, long: 0 });
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const chef_id = location.state?.chef_id;
   const { id: recipe_id } = useParams();
@@ -71,7 +75,7 @@ const UserOrder = () => {
   const fetchRecipeData = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/recipes/${chef_id}/${recipe_id}`,
+        `http://localhost:3000/api/recipes/${recipe_id}`,
         {
           method: "GET",
           headers: { "Content-Type": "application/json" },
@@ -79,11 +83,11 @@ const UserOrder = () => {
       );
       if (response.ok) {
         const data = await response.json();
-        setRecipeData(data[0]);
-        console.log("Recipe data:", data[0]);
-        setRecipeType(data[0].booking_type);
+        setRecipeData(data);
+        console.log("Recipe data:", data);
+        setRecipeType(data.booking_type);
         console.log(recipeType);
-        console.log("BOOKING TYPE:", data[0].booking_type);
+        console.log("BOOKING TYPE:", data.booking_type);
       } else {
         console.error("Failed to fetch recipe data:", response.statusText);
       }
@@ -94,64 +98,65 @@ const UserOrder = () => {
 
   // GET USER LOCATION
   // GET USER LOCATION
-  useEffect(() => {
-    let retryCount = 0;
+
+  let retryCount = 0;
     const maxRetries = 3; // Maximum number of retry attempts
 
-    const fetchLocation = () => {
-      if (!navigator.geolocation) {
-        alert("Geolocation is not supported by this browser!");
-        return;
-      }
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = {
-            lat: pos.coords.latitude,
-            long: pos.coords.longitude,
-          };
-          console.log("✅ User location:", loc);
-          setUserGeolocation(loc);
-        },
-        (error) => {
-          console.error("❌ Geolocation error:", error.message);
-          switch (error.code) {
-            case error.PERMISSION_DENIED:
-              alert(
-                "You denied the location request. Please enable location services."
-              );
-              break;
-            case error.POSITION_UNAVAILABLE:
-              alert("Location information is unavailable. Retrying...");
-              break;
-            case error.TIMEOUT:
-              alert("The request to get user location timed out. Retrying...");
-              break;
-            default:
-              alert("An unknown error occurred.");
-              break;
-          }
+const fetchLocation = async () => {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by this browser!");
+    return null;
+  }
 
-          if (retryCount < maxRetries) {
-            retryCount++;
-            console.log(
-              `🔄 Retrying location fetch (${retryCount}/${maxRetries})...`
-            );
-            setTimeout(fetchLocation, 3000); // Wait 3 seconds before retrying
-          } else {
-            alert("Failed to get location after multiple attempts.");
-          }
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 0,
-        }
-      );
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false, // Reduce precision to improve success rate
+        timeout: 15000,            // Extend timeout
+        maximumAge: 10000,         // Use cached location if available
+      });
+    });
+
+    const loc = {
+      lat: position.coords.latitude,
+      long: position.coords.longitude,
     };
 
-    fetchLocation(); // Initial call
-  }, []);
+    console.log("✅ User location:", loc);
+    return loc;
+  } catch (error) {
+    console.error("❌ Geolocation error:", error.message);
+
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        alert("You denied the location request. Please enable location services.");
+        break;
+      case error.POSITION_UNAVAILABLE:
+        alert("Location information is unavailable. Retrying...");
+        break;
+      case error.TIMEOUT:
+        alert("The request to get user location timed out. Retrying...");
+        break;
+      default:
+        alert("An unknown error occurred.");
+        break;
+    }
+
+    toast.error("Unable to fetch location, try again later");
+    return null;
+  }
+};
+
+  const setToCurrentLocation = async() => {
+    try {
+      const loc = await fetchLocation();
+      if(loc) setUserGeolocation(loc)
+    } catch (error) {
+      console.log("Unable to fetch location")
+    }
+  }
+
 
   useEffect(() => {
     if (chef_id) {
@@ -162,7 +167,22 @@ const UserOrder = () => {
     }
   }, [chef_id, recipe_id]);
 
+
+  const openLocationPicker = async() => {
+    try {
+      const loc = await fetchLocation();
+      if(loc) setUserGeolocation(loc)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsModalOpen(true)
+    }
+  }
+  
+
   const handleOrderNow = async () => {
+
+  
     const requestData = {
       chef_id,
       customer_id: auth.currentUser.uid,
@@ -172,6 +192,10 @@ const UserOrder = () => {
     };
 
     try {
+      if(!userGeolocation || userGeolocation.lat === 0 || userGeolocation === 0){
+        toast.error("Location not set!")
+        return
+      }
       const response = await APIService.instantBooking(
         requestData.chef_id,
         requestData.customer_id,
@@ -191,6 +215,8 @@ const UserOrder = () => {
     } catch (error) {
       console.error("Error placing order:", error);
       toast.error(error?.message || "An error occurred. Please try again.");
+    } finally{
+      setIsModalOpen(false)
     }
   };
 
@@ -277,13 +303,11 @@ const UserOrder = () => {
               )}
 
               {/* Buttons should be side by side */}
-              <div className="flex gap-6">
+              <div className="flex gap-2">
                 {/* Instant Order Button - Disabled when recipeType is "advance" */}
                 <button
-                  onClick={handleOrderNow}
-                  className="px-6 py-3 w-40 rounded-lg text-white transition duration-300 
-                 bg-blue-500 hover:bg-blue-600 
-                 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  onClick={openLocationPicker}
+                  className="text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
                   disabled={recipeType === "advance"}
                 >
                   Order Now
@@ -292,10 +316,9 @@ const UserOrder = () => {
                 {/* Advanced Booking Button */}
                 <button
                   onClick={handleAdvancedOrder}
-                  className="px-6 py-3 w-40 rounded-lg text-white transition duration-300 
-                 bg-blue-500 hover:bg-blue-600"
+                  className="focus:outline-none text-white bg-purple-600 hover:bg-purple-700 focus:ring-4 focus:ring-purple-300 font-medium rounded-lg text-sm px-5 py-2.5 mb-2 dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-900"
                 >
-                  Advanced Booking
+                  Advance Booking
                 </button>
               </div>
             </div>
@@ -312,8 +335,54 @@ const UserOrder = () => {
           <p className="text-sm text-justify">{recipeData?.ingredients}</p>
         </div>
       </div>
+      
+      {/* Flowbite Modal for Location Selection */}
+      <Modal show={isModalOpen} onClose={() => setIsModalOpen(false)}>
+        <Modal.Header>Select Your Location</Modal.Header>
+        <Modal.Body>
+          <div className="flex flex-col items-center justify-center gap-4">
+            {/* <p className="text-gray-600">Click below to use your current location:</p> */}
+            <button
+              onClick={setToCurrentLocation}
+              className="px-6 py-3 rounded-lg text-white bg-green-500 hover:bg-green-600"
+            >
+              Use Current Location
+            </button>
+
+            {/* <div className="h-72 w-full">
+                <MapsCard 
+                  latitude={parseFloat(userGeolocation.lat)} 
+                  longitude={parseFloat(userGeolocation.long)}
+                />
+
+            </div>  */}
+            
+            <GoogleMapComponent 
+              defaultLocation={{
+                lat: parseFloat(userGeolocation.lat),
+                lng: parseFloat(userGeolocation.long)
+              }} 
+              onLocationSelect={(loc) => setUserGeolocation({lat: loc.lat, long: loc.lng})}
+            />
+
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+         <div className="w-full flex justify-center gap-5">
+         <button onClick={handleOrderNow} className="text-white px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600">
+            Proceed
+          </button>
+          <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400">
+            Cancel
+          </button>
+         </div>
+          
+        </Modal.Footer>
+      </Modal>
     </>
   );
 };
 
+
 export default UserOrder;
+

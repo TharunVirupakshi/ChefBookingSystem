@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { initFlowbite } from "flowbite";
 import recipe from '../../../src/assets/sandwich.jpg'
 
-function RecipeCard({title,price,imageurl,handleBookNow = ()=>{} }) {
+function RecipeCard({title,price,imageurl,handleBookNow = ()=>{} , postedBy}) {
   useEffect(() => {
     initFlowbite();
   }, []);
@@ -26,6 +26,7 @@ function RecipeCard({title,price,imageurl,handleBookNow = ()=>{} }) {
           {title}
           </h5>
         </a>
+        <p className="text-xs text-gray-400">Posted by {postedBy}</p>
         <div className="flex items-center mt-2.5 mb-5">
           <div className="flex items-center space-x-1 rtl:space-x-reverse">
             <svg

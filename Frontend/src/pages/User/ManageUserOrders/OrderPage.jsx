@@ -57,29 +57,50 @@ function OrderPage({customer_id}) {
     }
   }, [notifications]);
 
-  const fetchLocation = () => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject("Geolocation is not supported by this browser!");
-        return;
-      }
-  
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const loc = {
-            lat: pos.coords.latitude,
-            long: pos.coords.longitude,
-          };
-          console.log("User location:", loc);
-          resolve(loc); // Resolve the promise with the location
-        },
-        (error) => {
-          console.error("❌ Geolocation error:", error.message);
-          reject("Failed to get location.");
-        }
-      );
+  const fetchLocation = async () => {
+  if (!navigator.geolocation) {
+    alert("Geolocation is not supported by this browser!");
+    return null;
+  }
+
+  try {
+    const position = await new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false, // Reduce precision to improve success rate
+        timeout: 15000,            // Extend timeout
+        maximumAge: 10000,         // Use cached location if available
+      });
     });
-  };
+
+    const loc = {
+      lat: position.coords.latitude,
+      long: position.coords.longitude,
+    };
+
+    console.log("✅ User location:", loc);
+    return loc;
+  } catch (error) {
+    console.error("❌ Geolocation error:", error.message);
+
+    switch (error.code) {
+      case error.PERMISSION_DENIED:
+        alert("You denied the location request. Please enable location services.");
+        break;
+      case error.POSITION_UNAVAILABLE:
+        alert("Location information is unavailable. Retrying...");
+        break;
+      case error.TIMEOUT:
+        alert("The request to get user location timed out. Retrying...");
+        break;
+      default:
+        alert("An unknown error occurred.");
+        break;
+    }
+
+    toast.error("Unable to fetch location, try again later");
+    return null;
+  }
+};
 
   const getUserLocation = async () => {
     try {
@@ -139,6 +160,7 @@ useEffect(() => {
       // Fetch all customer orders
       
       const orders = await APIService.fetchCustomerOrders(auth.currentUser.uid);
+      orders?.sort((a, b) => new Date(b.order_date) - new Date(a.order_date))
       setOrders(orders); // Store all orders
 
       if (orders.length === 0) return;
@@ -156,11 +178,18 @@ useEffect(() => {
           let eta = 'Unavailable'; // Default value
           let dist = 'Unavailable';
           if (order?.chef_id && loc) {
-            const etaResponse = await getChefETA(order.chef_id, loc);
-            if (etaResponse.success) {
-              eta = etaResponse.eta;
-              dist = etaResponse.dist
+
+            const curChefOrder = await axios.get(`http://localhost:3000/api/orders/advance/curorder/${order.chef_id}`)
+            console.log('OrderId: ', order.order_id)
+            console.log('curCheforder', curChefOrder)
+            if(curChefOrder.data.order_id == order.order_id){
+              const etaResponse = await getChefETA(order.chef_id, loc);
+              if (etaResponse.success) {
+                eta = etaResponse.eta;
+                dist = etaResponse.dist
+              }
             }
+            
           }
 
           // Return the order with the added ETA field
@@ -199,12 +228,13 @@ useEffect(() => {
 
   return (
     <div>
-      {activeOrders.length > 0 ? (
-        activeOrders.map((order) => (
-          <div className="py-5 p-20 gap-2">
+    <div className="py-5 p-20 gap-2">
             <h1 className="font-semibold text-xl py-2 text-gray-500">
               Active Order
             </h1>
+      {activeOrders.length > 0 ? (
+        activeOrders.map((order) => (
+          
             <div className="flex gap-2 w-full">
               <RecipeStatusCard
                 Statustitle={
@@ -212,10 +242,13 @@ useEffect(() => {
                     ? "Booked"
                     : order?.status === "CANCELLED"
                     ? "Cancelled"
-                    : "-"
+                    : " "
                 }
                 locationName={""}
                 title={order?.title}
+                type={order?.type}
+                chefName={order?.chef_name}
+                startDateTime={new Date(order?.start_date_time).toLocaleString()}
               />
               <div className="w-full border rounded-lg text-center overflow-hidden flex flex-col justify-center items-center">
               
@@ -234,13 +267,14 @@ useEffect(() => {
               /> */}
               </div>
             </div>
-          </div>
+          
         ))
       ) : (
         <div className="w-full text-center text-gray-500 py-10">
           <h2 className="text-lg">📭 You have no orders.</h2>
         </div>
       )}
+      </div>
       <h1 className="font-normal text-xl text-gray-500">Order History</h1>
       <Table customerOrders={orders} customerRecipes={recipes} />
     </div>
@@ -455,7 +489,15 @@ console.log('chefData',chefData)
                     })()
                   }
                 </td>
-                <td class="px-6 py-4">{order.type}</td>
+                <td class="px-6 py-4">
+
+                {order.type === 'ADVANCE' && (
+                  <div className='w-full bg-purple-600 text-white font-light text-sm rounded-lg text-center p-1 px-2'>ADVANCE</div>
+                )}
+                {order.type === 'INSTANT' && (
+                  <div className='w-full bg-green-500 text-white font-light text-sm rounded-lg text-center p-1 px-2'>INSTANT</div>
+                )}
+                </td>
                 <td class="px-6 py-4">
                   <div class="flex items-center">
                     <div class={`${

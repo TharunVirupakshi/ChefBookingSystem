@@ -2,10 +2,18 @@ import React, { useEffect } from "react";
 import { Card, Dropdown } from "flowbite-react";
 import recipe from "../../../src/assets/sandwich.jpg";
 
-const RecipeStatusCard = ({ Statustitle, locationName, title }) => {
+const RecipeStatusCard = ({ Statustitle, locationName, title, type, startDateTime, chefName}) => {
   return (
     <>
       <Card className="max-w-lg p-2">
+
+
+      {type === 'ADVANCE' && (
+        <div className='bg-purple-600 text-white font-light text-sm rounded-lg text-center w-fit p-1 px-2'>ADVANCE</div>
+      )}
+      {type === 'INSTANT' && (
+        <div className='bg-green-500 text-white font-light text-sm rounded-lg text-center w-fit p-1 px-2'>INSTANT</div>
+      )}
         <span
           className={`${
             Statustitle === "Rejected"
@@ -17,6 +25,7 @@ const RecipeStatusCard = ({ Statustitle, locationName, title }) => {
         >
           {Statustitle}
         </span>
+
         <div className="flex flex-col items-center">
           <img
             alt="Bonnie image"
@@ -47,8 +56,9 @@ const RecipeStatusCard = ({ Statustitle, locationName, title }) => {
               </svg>
               <br></br>
 
-              {locationName}
+              {startDateTime}
             </span>
+            <p>Chef {chefName}</p>
           </div>
           <div className="mt-4 flex space-x-3 lg:mt-6"></div>
         </div>

@@ -560,7 +560,7 @@ const ManageChefOrders = ({ chef_id }) => {
     if (!order_id) toast.error("Order ID required");
 
     try {
-      const result = await APIService.cancelAdvanceBooking(order_id);
+      const result = await APIService.rejectAdvanceBooking(order_id);
       console.log("Reject response:", result);
 
       if (result.success) {
@@ -822,6 +822,7 @@ const ManageChefOrders = ({ chef_id }) => {
               onAccept={() => handleAdvanceAccept(order.order_id)}
               onReject={() => handleAdvanceReject(order.order_id)}
               active={true}
+              type={order?.type}
               // UserStatus={orderstatus}
               date={new Date(order.start_date_time).toLocaleDateString()}
               startTime={new Date(order.start_date_time).toLocaleTimeString()}
@@ -971,7 +972,7 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
             type="text"
             id="table-search-users"
             class="block pt-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            placeholder="Search for users"
+            placeholder="Search"
           />
         </div>
       </div>
@@ -1074,7 +1075,14 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
                   } */}
                   {new Date(order?.order_date).toLocaleString()}
                 </td>
-                <td class="px-6 py-4">{order?.type}</td>
+                <td class="px-6 py-4">
+                {order.type === 'ADVANCE' && (
+                  <div className='w-full bg-purple-600 text-white font-light text-sm rounded-lg text-center p-1 px-2'>ADVANCE</div>
+                )}
+                {order.type === 'INSTANT' && (
+                  <div className='w-full bg-green-500 text-white font-light text-sm rounded-lg text-center p-1 px-2'>INSTANT</div>
+                )}
+                </td>
                 <td class="px-6 py-4">
                   <div class="flex items-center">
                     <div

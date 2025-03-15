@@ -296,7 +296,7 @@ const fetchLocation = async () => {
             <div className="my-10 flex flex-col gap-4">
               {/* Display message when item is not available for instant booking */}
               {recipeType === "advance" && (
-                <p className="text-red-500 font-semibold">
+                <p className="text-red-500 text-xs">
                   Item is not available for instant booking. Please choose
                   advanced booking.
                 </p>
@@ -307,8 +307,9 @@ const fetchLocation = async () => {
                 {/* Instant Order Button - Disabled when recipeType is "advance" */}
                 <button
                   onClick={openLocationPicker}
-                  className="text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
-                  disabled={recipeType === "advance"}
+                  className="text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  
+                  disabled={recipeType === 'advance'}
                 >
                   Order Now
                 </button>

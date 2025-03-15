@@ -179,17 +179,25 @@ useEffect(() => {
           let dist = 'Unavailable';
           if (order?.chef_id && loc) {
 
-            const curChefOrder = await axios.get(`http://localhost:3000/api/orders/advance/curorder/${order.chef_id}`)
-            console.log('OrderId: ', order.order_id)
-            console.log('curCheforder', curChefOrder)
-            if(curChefOrder.data.order_id == order.order_id){
+            if(order?.type == "INSTANT"){
               const etaResponse = await getChefETA(order.chef_id, loc);
               if (etaResponse.success) {
                 eta = etaResponse.eta;
                 dist = etaResponse.dist
+              } 
+            }else{
+              const curChefOrder = await axios.get(`http://localhost:3000/api/orders/advance/curorder/${order.chef_id}`)
+              console.log('OrderId: ', order.order_id)
+              console.log('curCheforder', curChefOrder)
+              if(curChefOrder.data.order_id == order.order_id){
+                const etaResponse = await getChefETA(order.chef_id, loc);
+                if (etaResponse.success) {
+                  eta = etaResponse.eta;
+                  dist = etaResponse.dist
+                }
               }
             }
-            
+
           }
 
           // Return the order with the added ETA field

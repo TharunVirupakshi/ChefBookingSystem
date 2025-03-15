@@ -859,7 +859,7 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
 
   useEffect(() => {
     initFlowbite();
-  }, []);
+  });
 
   const handleView = async (order) => {
     try {

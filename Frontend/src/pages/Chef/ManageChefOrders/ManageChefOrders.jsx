@@ -615,13 +615,11 @@ const ManageChefOrders = ({ chef_id }) => {
 
         orders?.sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
 
-        const ordersForToday = orders.filter((order) => {
-          const date = new Date(order.start_date_time);
-          return (
-            date.toLocaleDateString() === new Date().toLocaleDateString() &&
-            !["COMPLETED", "CANCELLED"].includes(order.status)
-          );
-        });
+        const ordersForToday = orders.filter( order => {
+          const date = new Date(order.start_date_time)
+          return order.type === 'ADVANCE' && date.toLocaleDateString() === new Date().toLocaleDateString() && !['COMPLETED', 'CANCELLED'].includes(order.status)
+        })
+
 
         const pendOrders = orders.filter(
           (order) => order.type === "ADVANCE" && order.status === "PENDING"
@@ -739,31 +737,33 @@ const ManageChefOrders = ({ chef_id }) => {
               />
             </div>
           </div>
-        ) : orderData?.length > 0 ? (
-          orderData.map((order) => (
-            <div className="flex gap-2 w-full">
-              {/* Instant Order Card for fetched orderData */}
-              <OrderCard
-                title={`Order ${order?.title}`}
-                description={`Total Price: ₹${order.total_price}`}
-                recipeId={order?.recipe_id}
-                customerId={order?.customer_id}
-                location={order?.location}
-                onComplete={() => handleComplete(order.order_id)}
-                onCancel={() => handleCancel(order.order_id)}
-                active={false}
-                UserStatus={orderstatus}
-                type={order?.type}
-              />
-              <div className="w-full border rounded-lg overflow-hidden">
-                <MapsCard
-                  latitude={parseFloat(order?.latitude) || 0}
-                  longitude={parseFloat(order?.longitude) || 0}
-                />
-              </div>
-            </div>
-          ))
-        ) : (
+
+        ) : orderData?.length > 0 ? orderData.map( order => (
+          <div className="flex gap-2 w-full">
+          {/* Instant Order Card for fetched orderData */}
+          <OrderCard
+            title={order?.title}
+            description={`Total Price: ₹${order.total_price}`}
+            imageUrl={getImgUrl(parseInt(order?.recipe_id))}
+            recipeId={order?.recipe_id}
+            customerId={order?.customer_id}
+            location={order?.location}
+            onComplete={() => handleComplete(order.order_id)}
+            onCancel={() => handleCancel(order.order_id)}
+            active={false}
+            UserStatus={orderstatus}
+            type={order?.type}
+          />
+          <div className="w-full border rounded-lg overflow-hidden">
+            <MapsCard
+              latitude={parseFloat(order?.latitude) || 0}
+              longitude={parseFloat(order?.longitude) || 0}
+            />
+          </div>
+        </div>
+        ))
+        
+         : (
           <div className="w-full text-center text-gray-500 py-10">
             <h2 className="text-lg">📭 You have no instant orders.</h2>
           </div>

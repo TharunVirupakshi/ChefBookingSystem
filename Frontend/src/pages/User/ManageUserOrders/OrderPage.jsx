@@ -164,7 +164,7 @@ useEffect(() => {
       setOrders(orders); // Store all orders
 
       if (orders.length === 0) return;
-
+      orders?.sort((a, b)=> new Date(b.order_date) - new Date(a.order_date));
       // Filter pending orders
       const pendingOrders = orders.filter(order => order.status === "PENDING" || order.status === "CONFIRMED");
       
@@ -473,21 +473,7 @@ console.log('chefData',chefData)
                 </th>
                 <td class="px-6 py-4">{order?.title || "No recipe title"}</td>
                 <td class="px-6 py-4">
-                  {
-                    // Combine today's date with the provided time string and format it
-                    (() => {
-                      const timeString = order.end_date_time; // Assuming order.end_date_time is in the format "11:55:26.300822"
-                      const today = new Date(); // Get today's date
-
-                      // Combine the current date with the time string
-                      const dateWithTime = new Date(
-                        today.toDateString() + " " + timeString
-                      );
-
-                      // Return the formatted date in dd/mm/yyyy format
-                      return dateWithTime.toLocaleDateString("en-GB");
-                    })()
-                  }
+                {new Date(order?.order_date).toLocaleString()}
                 </td>
                 <td class="px-6 py-4">
 

@@ -19,13 +19,17 @@ const AdvancedOrderPage = () => {
   const [userGeolocation, setUserGeolocation] = useState({ lat: 0, lng: 0 });
   const navigate = useNavigate();
 
+
   useEffect(() => {
+
+    const fetchloc = async() => await setToCurrentLocation()
+
     if (!loading && user) {
       console.log("User: ", user);
       const uid = user.uid;
       setUserId(uid);
       console.log("useruid", userId);
-      setToCurrentLocation()
+      fetchloc()
     }
   }, [user, loading]);
 
@@ -48,7 +52,7 @@ const AdvancedOrderPage = () => {
 
     const loc = {
       lat: position.coords.latitude,
-      long: position.coords.longitude,
+      lng: position.coords.longitude,
     };
 
     console.log("✅ User location:", loc);
@@ -131,6 +135,7 @@ const AdvancedOrderPage = () => {
   const setToCurrentLocation = async() => {
     try {
       const loc = await fetchLocation();
+      console.log("Fetched location: ", loc)
       if(loc) setUserGeolocation(loc)
     } catch (error) {
       console.log("Unable to fetch location")

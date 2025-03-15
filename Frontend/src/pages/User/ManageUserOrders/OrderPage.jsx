@@ -246,8 +246,8 @@ useEffect(() => {
             <div className="flex gap-2 w-full">
               <RecipeStatusCard
                 Statustitle={
-                  order?.status === "PENDING"
-                    ? "Booked"
+                  order?.status === "PENDING" ? "Booked"
+                    : order?.status === "CONFIRMED" ? "Confirmed"
                     : order?.status === "CANCELLED"
                     ? "Cancelled"
                     : " "
@@ -496,7 +496,7 @@ console.log('chefData',chefData)
                   <div class="flex items-center">
                     <div class={`${
                         order.status === "COMPLETED" ? "bg-green-500" 
-                        : order.status === "CONFIRMED" ? "bg-purple-300"
+                        : order.status === "CONFIRMED" ? "bg-purple-500"
                         : order.status === "PENDING" ? "bg-yellow-300" 
                         : order.status === "CANCELLED" ? "bg-red-500" 
                         : "bg-gray-500"

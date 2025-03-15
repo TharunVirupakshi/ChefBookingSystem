@@ -56,6 +56,7 @@ fetchReciepes()
             <RecipeCard 
                 title={recipe.title}
                 price={recipe.price}
+                postedBy={recipe.chef_full_name}
                 imageurl={getImgUrl(recipe.recipe_id)}
                 handleBookNow={()=>handleBookNow(recipe.recipe_id,recipe.chef_id)}
             />

@@ -6,8 +6,12 @@ const Joi = require("joi");
 router.get("/", async (req, res) => {
   try {
     const result = await client.query(
-      "Select * from recipe WHERE deleted_at IS NULL"
+      `SELECT recipe.*, chef.full_name as chef_full_name 
+       FROM recipe 
+       LEFT JOIN chef ON recipe.chef_id = chef.chef_id
+       WHERE recipe.deleted_at IS NULL`
     );
+
     res.status(200).json(result.rows);
   } catch (error) {
     console.error("Error fetching recipes:", error);
@@ -15,7 +19,8 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/:id" , async(req,res)=>{
+
+router.get("/chef/:id" , async(req,res)=>{
   const { id } = req.params;
   try {
     const result = await client.query(
@@ -33,22 +38,47 @@ router.get("/:id" , async(req,res)=>{
 })
 
 //Fetch recipe by recipe_id
-router.get("/recipe/:recipe_id", async (req, res) => {
+router.get("/:recipe_id", async (req, res) => {
+
+  console.log("Fetching recipe")
   const { recipe_id } = req.params;
 
-  try {
-    const result = await client.query("SELECT * FROM recipe WHERE recipe_id = $1", [recipe_id]);
+  if(!recipe_id){
+    console.log("Recipe id is null")
+    return
+  }
 
+  try {
+    // Fetch recipe details
+    const result = await client.query("SELECT * FROM recipe WHERE recipe_id = $1", [recipe_id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Recipe not found" });
     }
 
-    res.status(200).json(result.rows[0]);
+    const recipe = result.rows[0];
+    const chef_id = recipe.chef_id;
+
+    if (!chef_id) {
+      return res.status(404).json({ message: "Chef not found" });
+    }
+
+    // Fetch chef details
+    const chefResult = await client.query("SELECT full_name FROM chef WHERE chef_id = $1", [chef_id]);
+
+    if (chefResult.rows.length === 0) {
+      return res.status(404).json({ message: "Chef not found" });
+    }
+
+    const chef = chefResult.rows[0];
+
+    // Include chef's full name in the response
+    res.status(200).json({ ...recipe, chef_full_name: chef.full_name });
   } catch (error) {
     console.error("Error fetching recipe:", error.message);
     res.status(500).json({ message: "Error fetching recipe" });
   }
 });
+
 
 
 // Fetch all recipes or filter by chef_id and recipe_id

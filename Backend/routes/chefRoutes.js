@@ -105,8 +105,15 @@ router.get('/status/:chef_id', async(req, res)=>{
         }
 
         try {
+            console.log('Fetching status for ', chef_id)
             const status = await getChefStatus(chef_id);
-            // console.log(status)
+            
+            if(!status){
+                console.log("Status not initialized, setting status...")
+                await updateChefStatus(chef_id, "BUSY")
+            }
+            
+            console.log(status)
             return res.status(200).json({success: true, status});
         } catch (error) {
             console.log("Error fetching Chef Status");

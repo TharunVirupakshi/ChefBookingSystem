@@ -40,6 +40,7 @@ const MapsCard = ({ latitude, longitude}) => {
     anchor: new window.google.maps.Point(20, 40), // Anchor point for the icon
   };
 
+  console.log("Showing map for: ", latitude, ", ", longitude)
   return (
     <div className="w-full h-full block">
     <GoogleMap

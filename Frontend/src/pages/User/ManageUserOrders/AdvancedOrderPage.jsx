@@ -5,6 +5,7 @@ import { useAuth } from "../../../context/AuthContext";
 import "react-toastify/dist/ReactToastify.css";
 import { toast } from "react-toastify";
 import GoogleMapComponent from "../../../components/Maps/GoogleMapComponent";
+import {useGeolocated} from "react-geolocated"
 
 const AdvancedOrderPage = () => {
   const location = useLocation();
@@ -19,66 +20,87 @@ const AdvancedOrderPage = () => {
   const [userGeolocation, setUserGeolocation] = useState({ lat: 0, lng: 0 });
   const navigate = useNavigate();
 
+  const { coords, isGeolocationAvailable, isGeolocationEnabled } = useGeolocated({
+    positionOptions: {
+      enableHighAccuracy: true,
+      timeout: 20000,
+      maximumAge: 0
+    },
+    userDecisionTimeout: 50000,
+  });
+
 
   useEffect(() => {
 
     const fetchloc = async() => await setToCurrentLocation()
-
+    
     if (!loading && user) {
       console.log("User: ", user);
       const uid = user.uid;
       setUserId(uid);
       console.log("useruid", userId);
-      fetchloc()
+      // fetchloc()
     }
   }, [user, loading]);
 
+  useEffect(() => {
+    if (isGeolocationEnabled && isGeolocationAvailable) {
+      setUserGeolocation({ lat: coords?.latitude, lng: coords?.longitude });
+    }else{
+      console.log("Error fetching geoloation...")
+    }
+  }, [coords, isGeolocationAvailable, isGeolocationEnabled]);
+  
   
 
-    const fetchLocation = async () => {
-  if (!navigator.geolocation) {
-    alert("Geolocation is not supported by this browser!");
-    return null;
-  }
-
-  try {
-    const position = await new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: false, // Reduce precision to improve success rate
-        timeout: 15000,            // Extend timeout
-        maximumAge: 10000,         // Use cached location if available
-      });
-    });
-
-    const loc = {
-      lat: position.coords.latitude,
-      lng: position.coords.longitude,
-    };
-
-    console.log("✅ User location:", loc);
-    return loc;
-  } catch (error) {
-    console.error("❌ Geolocation error:", error.message);
-
-    switch (error.code) {
-      case error.PERMISSION_DENIED:
-        alert("You denied the location request. Please enable location services.");
-        break;
-      case error.POSITION_UNAVAILABLE:
-        alert("Location information is unavailable. Retrying...");
-        break;
-      case error.TIMEOUT:
-        alert("The request to get user location timed out. Retrying...");
-        break;
-      default:
-        alert("An unknown error occurred.");
-        break;
+  const fetchLocation = async () => {
+    if (!navigator.geolocation) {
+      console.error("Geolocation is not supported by this browser!");
+      return null;
     }
+  
 
-    toast.error("Unable to fetch location, try again later");
-    return null;
-  }
-};
+  
+    try {
+      console.log("📍 Fetching location...");
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: false, // Reduce precision to improve success rate
+          timeout: 20000,            // Extend timeout
+          maximumAge: 10000, // Use cached location if available
+        });
+      });
+  
+      const loc = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      };
+  
+      console.log("✅ User location:", loc);
+      return loc;
+    } catch (error) {
+      console.error("❌ Geolocation error:", error.message);
+  
+      switch (error.code) {
+        case error.PERMISSION_DENIED:
+          console.error("You denied the location request. Please enable location services.");
+          break;
+        case error.POSITION_UNAVAILABLE:
+          console.error("Location information is unavailable. Retrying...");
+          break;
+        case error.TIMEOUT:
+          console.error("The request to get user location timed out. Retrying...");
+          break;
+        default:
+          console.error("An unknown error occurred.");
+          break;
+      }
+  
+      toast.error("Unable to fetch location, try again later");
+      return null;
+    }
+  };
+  
 
 
 

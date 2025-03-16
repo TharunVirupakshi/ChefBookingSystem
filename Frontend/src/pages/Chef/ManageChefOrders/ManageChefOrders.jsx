@@ -617,7 +617,7 @@ const ManageChefOrders = ({ chef_id }) => {
 
         const ordersForToday = orders.filter( order => {
           const date = new Date(order.start_date_time)
-          return order.type === 'ADVANCE' && date.toLocaleDateString() === new Date().toLocaleDateString() && !['COMPLETED', 'CANCELLED'].includes(order.status)
+          return order.type === 'ADVANCE' && date.toLocaleDateString() === new Date().toLocaleDateString() && !['COMPLETED', 'CANCELLED', 'PENDING'].includes(order.status)
         })
 
 

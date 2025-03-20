@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Card, Dropdown } from "flowbite-react";
 import recipe from "../../../src/assets/sandwich.jpg";
 
-const RecipeStatusCard = ({ Statustitle, locationName, title, type, startDateTime, chefName}) => {
+const RecipeStatusCard = ({ Statustitle, locationName, title, type, startDateTime, chefName, imgurl}) => {
   return (
     <>
       <Card className="max-w-lg p-2">
@@ -27,12 +27,13 @@ const RecipeStatusCard = ({ Statustitle, locationName, title, type, startDateTim
         </span>
 
         <div className="flex flex-col items-center">
-          <img
-            alt="Bonnie image"
-            src={recipe}
-            className="mb-3 rounded-full aspect-square w-40 shadow-lg"
-          />
-
+          <div className="mb-3 rounded-full aspect-square w-40 shadow-lg overflow-hidden">
+            <img
+              alt="Bonnie image"
+              src={imgurl}
+              className="w-40 "
+            />
+          </div>
           <div className="text-center w-[250px]">
             <h5 className="mb-1 text-xl font-medium text-gray-900 dark:text-white">
               {title}

@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import GoogleMapComponent from "../../../components/Maps/GoogleMapComponent";
 import {useGeolocated} from "react-geolocated"
 
+
 const AdvancedOrderPage = () => {
   const location = useLocation();
   const chef_id = location.state?.chef_id;
@@ -22,8 +23,8 @@ const AdvancedOrderPage = () => {
 
   const { coords, isGeolocationAvailable, isGeolocationEnabled } = useGeolocated({
     positionOptions: {
-      enableHighAccuracy: true,
-      timeout: 20000,
+      enableHighAccuracy: false,
+      timeout: 30000,
       maximumAge: 0
     },
     userDecisionTimeout: 50000,
@@ -44,6 +45,11 @@ const AdvancedOrderPage = () => {
   }, [user, loading]);
 
   useEffect(() => {
+  console.log("Geolocation Status:", { isGeolocationAvailable, isGeolocationEnabled, coords });
+}, [isGeolocationAvailable, isGeolocationEnabled, coords]);
+
+
+  useEffect(() => {
     if (isGeolocationEnabled && isGeolocationAvailable) {
       setUserGeolocation({ lat: coords?.latitude, lng: coords?.longitude });
     }else{
@@ -51,7 +57,14 @@ const AdvancedOrderPage = () => {
     }
   }, [coords, isGeolocationAvailable, isGeolocationEnabled]);
   
-  
+  const manualFetchLocation = () => {
+  if (isGeolocationEnabled && isGeolocationAvailable && coords) {
+    setUserGeolocation({ lat: coords.latitude, lng: coords.longitude });
+  } else {
+    console.log("Error fetching geolocation...");
+  }
+};
+
 
   const fetchLocation = async () => {
     if (!navigator.geolocation) {
@@ -241,10 +254,20 @@ const AdvancedOrderPage = () => {
           }
         />
 
+            
+
         {/* Show selected location */}
         <p className="mt-3 text-gray-700">
           Selected Location: {userGeolocation.lat}, {userGeolocation.lng}
         </p>
+
+        <button
+              onClick={manualFetchLocation}
+              className="px-6 py-3 rounded-lg text-white bg-green-500 hover:bg-green-600"
+            >
+              Use Current Location
+            </button>
+        
       </div>
       <div className="bg-white p-6 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">

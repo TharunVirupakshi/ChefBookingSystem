@@ -1661,21 +1661,48 @@ router.get("/advance/curorder/:chef_id", async (req, res) => {
   }
 });
 
-// Helper: Get ETA (in minutes) using Google Distance Matrix API
+// Helper: Get ETA (in minutes) 
 const getETA = async (origin, destination, departureDate) => {
-  const departureTimeSec = Math.floor(new Date(departureDate));
-  const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin.lat},${origin.long}&destinations=${destination.lat},${destination.long}&departure_time=${departureTimeSec}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+  const departureTimeSec = Math.floor(new Date(departureDate).getTime() / 1000);
+  const url = `https://routes.googleapis.com/directions/v2:computeRoutes`;
 
-  const response = await fetch(url);
+  const requestBody = {
+    origin: {
+      location: {
+        latLng: { latitude: origin.lat, longitude: origin.long },
+      },
+    },
+    destination: {
+      location: {
+        latLng: { latitude: destination.lat, longitude: destination.long },
+      },
+    },
+    travelMode: "DRIVE", // Change to "WALK", "BICYCLE", or "TRANSIT" if needed
+    routingPreference: "TRAFFIC_AWARE", // Consider real-time traffic data
+    departureTime: departureTimeSec ? new Date(departureTimeSec * 1000).toISOString() : undefined,
+    computeAlternativeRoutes: false,
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": process.env.GOOGLE_MAPS_API_KEY,
+      "X-Goog-FieldMask": "routes.duration",
+    },
+    body: JSON.stringify(requestBody),
+  });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch data from Google Distance Matrix API");
+    throw new Error("Failed to fetch data from Google Routes API");
   }
 
   const data = await response.json();
   console.log("ETA response: ", data);
-  // Convert seconds to minutes.
-  return data.rows[0].elements[0].duration.value / 60;
+
+  // Convert seconds to minutes
+  return data.routes[0]?.duration?.seconds / 60;
 };
+
 
 module.exports = router;

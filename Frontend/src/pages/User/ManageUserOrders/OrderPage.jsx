@@ -8,6 +8,7 @@ import { initFlowbite } from 'flowbite';
 import axios from 'axios';
 import { auth } from '../../../Firebase/firebase';
 import RiderGIF from '../../../assets/rider.gif'
+import getImgUrl from '../../../utils/images';
 function OrderPage({customer_id}) {
   const {notifications} = useNotification();
   const location = useLocation();
@@ -252,6 +253,7 @@ useEffect(() => {
                     ? "Cancelled"
                     : " "
                 }
+                imgurl={getImgUrl(order?.recipe_id)}
                 locationName={""}
                 title={order?.title}
                 type={order?.type}

@@ -877,6 +877,7 @@ const ManageChefOrders = ({ chef_id }) => {
             {order?.type === "ADVANCE" && (
               <Button
                 onClick={() => handleClashCheck(order.order_id, order.chef_id)}
+                className="felx items-center"
               >
                 Check Clash
               </Button>

@@ -1587,8 +1587,8 @@ router.get("/check/:order_id/:chef_id", async (req, res) => {
 
     // 3. Return all clashes
     if (clashingOrders.length > 0) {
-      return res.status(409).json({
-        success: false,
+      return res.status(200).json({
+        success: true,
         message: `Found ${clashingOrders.length} clashing orders.`,
         clashes: clashingOrders,
         checkedOrder: currentOrder,

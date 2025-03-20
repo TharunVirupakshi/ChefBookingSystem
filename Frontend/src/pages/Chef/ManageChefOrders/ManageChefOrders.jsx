@@ -30,6 +30,7 @@ const ManageChefOrders = ({ chef_id }) => {
   const [orderData, setOrderData] = useState(null);
   const [chefGeolocation, setChefGeolocation] = useState({ lat: 0, long: 0 });
   const [loading, setLoading] = useState(false);
+  const [clashingOrderIds, setClashingOrderIds] = useState([]);
 
   // Google Maps Geocoding API Key
   const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_JS_API_KEY;
@@ -506,11 +507,23 @@ const ManageChefOrders = ({ chef_id }) => {
     try {
       const result = await APIService.checkAdvancedClashes(order_id, chef_id);
       console.log("Clash response:", result);
+      const clashes = result.clashes;
 
-      if (result.success) {
-        toast.success("No clashes found");
-      } else {
+      if (clashes && clashes.length > 0) {
         toast.error(result.message || "Clashes found");
+        // Extract all order.order_id values
+        const clashingIds = clashes.map((clash) => clash.order.order_id);
+
+        // Save to state
+        setClashingOrderIds(clashingIds);
+
+        console.log("Clashing Order IDs:", clashingIds);
+      } else {
+        // Clear previous clashes if none found
+        toast.success("No clashes found");
+
+        setClashingOrderIds([]);
+        console.log("No clashes found.");
       }
     } catch (error) {
       console.error("Error checking clashes:", error);
@@ -562,6 +575,25 @@ const ManageChefOrders = ({ chef_id }) => {
     if (!order_id) toast.error("Order ID required");
 
     try {
+      const confirmComplete = window.confirm(
+        `Are you sure you want to complete this order? ${
+          clashingOrderIds.length > 0
+            ? `${clashingOrderIds.length} orders will be auto rejected.`
+            : ""
+        }`
+      );
+
+      if (!confirmComplete) {
+        // User cancelled the action
+        toast.info("Action cancelled.");
+        return;
+      }
+
+      for (const clashId of clashingOrderIds) {
+        console.log("Rejecting clash:", clashId);
+        await handleAdvanceReject(clashId); // Waiting for each reject to complete
+      }
+
       const result = await APIService.confirmAdvanceBooking(order_id);
       console.log("Accept response:", result);
 
@@ -833,13 +865,23 @@ const ManageChefOrders = ({ chef_id }) => {
 
       {pendingOrders.length > 0 ? (
         pendingOrders.map((order) => (
-          <div className="flex gap-2 w-full">
+          <div
+            key={order.order_id}
+            className={`flex gap-2 w-full p-2 rounded-lg transition-all ${
+              clashingOrderIds.includes(order.order_id)
+                ? "border-2 border-red-500 bg-red-50"
+                : "border"
+            }`}
+          >
             {/* Instant Order Card for fetched orderData */}
-            <Button
-              onClick={() => handleClashCheck(order.order_id, order.chef_id)}
-            >
-              check clashes
-            </Button>
+            {order?.type === "ADVANCE" && (
+              <Button
+                onClick={() => handleClashCheck(order.order_id, order.chef_id)}
+              >
+                Check Clash
+              </Button>
+            )}
+
             <OrderCard
               title={order?.title}
               imageUrl={getImgUrl(order.recipe_id)}

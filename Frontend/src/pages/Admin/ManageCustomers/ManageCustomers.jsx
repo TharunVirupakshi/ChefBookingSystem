@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useEffect } from "react";
 import Toast from "../../../components/Toast/Toast";
 import { HiPencil, HiTrash } from "react-icons/hi";
+import { initFlowbite } from "flowbite";
 
 const ManageCustomers = () => {
   const [customers, setCustomers] = useState([]);
@@ -11,7 +12,9 @@ const ManageCustomers = () => {
   const [isToastVisible, setIsToastVisible] = useState(false);
   const [timeoutId, setTimeoutId] = useState(null);
 
-
+useEffect(()=>{
+  initFlowbite()
+},[])
   const showToast = (type, message) => {
     setToast({ type, message });
     setIsToastVisible(true);

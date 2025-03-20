@@ -6,25 +6,25 @@ import Toast from "../../../components/Toast/Toast";
 import { HiPencil, HiTrash } from "react-icons/hi";
 
 const ManageOrders = () => {
-//   const [orders, setOrders] = useState([]);
+  const [orders, setOrders] = useState([]);
 
-//   const fetchOrders = async () => {
-//     try {
-//       const response = await fetch("http://localhost:3000/api/orders", {
-//         method: "GET",
-//         headers: { "Content-Type": "application/json" },
-//       });
-//       const data = await response.json();
-//       setOrders(data);
-//       console.log("Orders:", data);
-//     } catch (error) {
-//       console.error("Error fetching recipes:", error.message);
-//     }
-//   };
+  const fetchOrders = async () => {
+    try {
+      const response = await fetch("http://localhost:3000/api/orders", {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      setOrders(data);
+      console.log("Orders:", data);
+    } catch (error) {
+      console.error("Error fetching recipes:", error.message);
+    }
+  };
 
-//   useEffect(() => {
-//     fetchOrders();
-//   }, []);
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
 
   return (
@@ -52,17 +52,21 @@ const ManageOrders = () => {
             <Table.HeadCell>Total Price</Table.HeadCell>
             <Table.HeadCell>Type</Table.HeadCell>   
           </Table.Head>
-          {/* <Table.Body className="divide-y">
-            {customers.map((customer, index) => (
+          <Table.Body className="divide-y">
+            {orders.map((order, index) => (
               <Table.Row
-                key={customer.customer_id}
+                key={order.customer_id}
                 className="bg-white dark:border-gray-700 dark:bg-gray-800"
               >
-                <TableCell>{customer.customer_id}</TableCell>
-                <TableCell>{customer.full_name}</TableCell>
-                <TableCell>{customer.email}</TableCell>
-                <TableCell>{customer.phone_number}</TableCell>
-                <TableCell>{customer.address}</TableCell>
+                <TableCell>{order.order_id}</TableCell>
+                <TableCell>{order.customer_id}</TableCell>
+                <TableCell>{order.chef_id}</TableCell>
+                <TableCell>{order.recipe_id}</TableCell>
+                <TableCell>{order.order_date}</TableCell>
+                <TableCell>{order.start_date_time}</TableCell>
+                <TableCell>{order.status}</TableCell>
+                <TableCell>{order.end_date_time}</TableCell>
+                <TableCell>{order.total_price}</TableCell>
                 <TableCell>
                   <div className="flex items-center justify-center">
                     <button
@@ -81,7 +85,7 @@ const ManageOrders = () => {
                 </TableCell>
               </Table.Row>
             ))}
-          </Table.Body> */}
+          </Table.Body>
         </Table>
     </div>
   )

@@ -1493,13 +1493,17 @@ router.get("/check/:order_id/:chef_id", async (req, res) => {
       `SELECT * FROM orders 
       WHERE chef_id = $1 
       AND status = 'PENDING'
-      AND DATE(order_date) = DATE($2)
+      AND DATE(start_date_time) = DATE($2)
       AND order_id != $3
       ORDER BY start_date_time ASC`,
-      [chef_id, currentOrder.order_date, order_id]
+      [chef_id, currentOrder.start_date_time, order_id]
     );
 
+    
     const remainingOrders = remainingOrdersResult.rows;
+    
+    console.log("[CLASH CHECK] Orders on the same date as cur order: ", 
+    remainingOrders.map(o => o.order_id))
 
     const clashingOrders = [];
 
@@ -1537,6 +1541,7 @@ router.get("/check/:order_id/:chef_id", async (req, res) => {
           destLoc,
           curEndTime
         );
+        console.log("[CLASH CHECK] TRAVEL CLASH BEFORE: ",tailETA)
 
         const arrivalTime = new Date(curEndTime.getTime() + tailETA * 60000);
 
@@ -1563,7 +1568,7 @@ router.get("/check/:order_id/:chef_id", async (req, res) => {
           { lat: latitude, long: longitude },
           otherEndTime
         );
-
+        console.log("[CLASH CHECK] TRAVEL CLASH AFTER: ",headETA)
         const arrivalTime = new Date(otherEndTime.getTime() + headETA * 60000);
 
         if (arrivalTime > curOrderStart) {
@@ -1701,7 +1706,8 @@ const getETA = async (origin, destination, departureDate) => {
   console.log("ETA response: ", data);
 
   // Convert seconds to minutes
-  return data.routes[0]?.duration?.seconds / 60;
+  const seconds = data.routes[0]?.duration.split("s")[0];
+  return  parseInt(seconds)/ 60;
 };
 
 

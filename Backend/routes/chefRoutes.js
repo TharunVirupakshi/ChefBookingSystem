@@ -17,9 +17,9 @@ router.get('/', async (req, res) => {
     }
 })
 
+
 router.get('/get-eta', async (req, res) => {
     const { chef_id, user_lat, user_long } = req.query;
-    // console.log("ETA req:", req.body)
 
     if (!chef_id || user_lat === undefined || user_long === undefined) {
         return res.status(400).json({ success: false, message: 'chef_id, user_lat, and user_long are required' });
@@ -28,39 +28,65 @@ router.get('/get-eta', async (req, res) => {
     try {
         // Fetch chef's location from Redis
         const chefLocation = await getChefLocation(chef_id);
-        // console.log("chef loc: ", chefLocation)
-        // console.log("API KEY:", process.env.GOOGLE_MAPS_API_KEY)
 
-        const distanceMatrixURL = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${chefLocation.latitude},${chefLocation.longitude}&destinations=${user_lat},${user_long}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+        const url = `https://routes.googleapis.com/directions/v2:computeRoutes`;
 
-        // Use fetch instead of axios
-        const response = await fetch(distanceMatrixURL);
-        
-        // Check if the response is okay (status 200)
+        const requestBody = {
+            origin: {
+                location: {
+                    latLng: { latitude: chefLocation.latitude, longitude: chefLocation.longitude },
+                },
+            },
+            destination: {
+                location: {
+                    latLng: { latitude: parseFloat(user_lat), longitude: parseFloat(user_long) },
+                },
+            },
+            travelMode: "DRIVE",
+            routingPreference: "TRAFFIC_AWARE_OPTIMAL",
+            // departureTime: new Date().toISOString(),
+            computeAlternativeRoutes: false,
+        };
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": process.env.GOOGLE_MAPS_API_KEY,
+                "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+            },
+            body: JSON.stringify(requestBody),
+        });
+
         if (!response.ok) {
-            throw new Error('Failed to fetch data from Google Distance Matrix API');
+            const errorText = await response.text();
+            console.error("❌ Google API Error:", errorText);
+            throw new Error("Failed to fetch data from Google Routes API");
         }
 
         const data = await response.json();
-        console.log("Maps response:", data)
-        const eta = data.rows[0].elements[0].duration.text;
-        const dist = data.rows[0].elements[0].distance.text;
+        console.log("✅ Route response:", JSON.stringify(data, null, 2));
 
-        // Send the ETA back to the client
+        const seconds = data.routes[0]?.duration.split("s")[0];
+        const etaSeconds = parseInt(seconds) || 0;
+        const distanceMeters = data.routes[0]?.distanceMeters || 0;
+
         return res.status(200).json({
             success: true,
-            eta,
-            dist
+            eta: Number((etaSeconds / 60).toFixed(0)), // Round to 1 decimal place
+            dist: Number((distanceMeters / 1000).toFixed(1)), // Round to 1 decimal place
         });
+        
 
     } catch (error) {
         console.error('❌ Error fetching ETA:', error);
         return res.status(500).json({
             success: false,
-            message: error.message || 'Failed to fetch ETA'
+            message: error.message || 'Failed to fetch ETA',
         });
     }
 });
+
 
 
 router.get('/:id', async (req, res) => {
@@ -96,6 +122,8 @@ router.post('/update-fcm-token', async(req, res)=>{
         res.status(500).json({ success: false, message: 'Failed to save FCM token' });
     }
 })
+
+
 
 router.get('/status/:chef_id', async(req, res)=>{
         const { chef_id } = req.params

@@ -7,6 +7,7 @@ import APIService from "../../../API/APIService";
 import { auth } from "../../../Firebase/firebase";
 import { initFlowbite } from "flowbite";
 import getImgUrl from "../../../utils/images";
+import { Button } from "flowbite-react";
 
 const ManageChefOrders = ({ chef_id }) => {
   const [refresh, setReferesh] = useState(false);
@@ -499,6 +500,26 @@ const ManageChefOrders = ({ chef_id }) => {
     }
   };
 
+  const handleClashCheck = async (order_id, chef_id) => {
+    if (!order_id) toast.error("Order ID required");
+
+    try {
+      const result = await APIService.checkAdvancedClashes(order_id, chef_id);
+      console.log("Clash response:", result);
+
+      if (result.success) {
+        toast.success("No clashes found");
+      } else {
+        toast.error(result.message || "Clashes found");
+      }
+    } catch (error) {
+      console.error("Error checking clashes:", error);
+      toast.error("Error checking clashes.");
+    } finally {
+      setReferesh((prev) => !prev);
+    }
+  };
+
   const handleAdvanceComplete = async (order_id) => {
     if (!order_id) toast.error("Order ID required");
 
@@ -615,11 +636,14 @@ const ManageChefOrders = ({ chef_id }) => {
 
         orders?.sort((a, b) => new Date(b.order_date) - new Date(a.order_date));
 
-        const ordersForToday = orders.filter( order => {
-          const date = new Date(order.start_date_time)
-          return order.type === 'ADVANCE' && date.toLocaleDateString() === new Date().toLocaleDateString() && !['COMPLETED', 'CANCELLED', 'PENDING'].includes(order.status)
-        })
-
+        const ordersForToday = orders.filter((order) => {
+          const date = new Date(order.start_date_time);
+          return (
+            order.type === "ADVANCE" &&
+            date.toLocaleDateString() === new Date().toLocaleDateString() &&
+            !["COMPLETED", "CANCELLED", "PENDING"].includes(order.status)
+          );
+        });
 
         const pendOrders = orders.filter(
           (order) => order.type === "ADVANCE" && order.status === "PENDING"
@@ -737,33 +761,32 @@ const ManageChefOrders = ({ chef_id }) => {
               />
             </div>
           </div>
-
-        ) : orderData?.length > 0 ? orderData.map( order => (
-          <div className="flex gap-2 w-full">
-          {/* Instant Order Card for fetched orderData */}
-          <OrderCard
-            title={order?.title}
-            description={`Total Price: ₹${order.total_price}`}
-            imageUrl={getImgUrl(parseInt(order?.recipe_id))}
-            recipeId={order?.recipe_id}
-            customerId={order?.customer_id}
-            location={order?.location}
-            onComplete={() => handleComplete(order.order_id)}
-            onCancel={() => handleCancel(order.order_id)}
-            active={false}
-            UserStatus={orderstatus}
-            type={order?.type}
-          />
-          <div className="w-full border rounded-lg overflow-hidden">
-            <MapsCard
-              latitude={parseFloat(order?.latitude) || 0}
-              longitude={parseFloat(order?.longitude) || 0}
-            />
-          </div>
-        </div>
-        ))
-        
-         : (
+        ) : orderData?.length > 0 ? (
+          orderData.map((order) => (
+            <div className="flex gap-2 w-full">
+              {/* Instant Order Card for fetched orderData */}
+              <OrderCard
+                title={order?.title}
+                description={`Total Price: ₹${order.total_price}`}
+                imageUrl={getImgUrl(parseInt(order?.recipe_id))}
+                recipeId={order?.recipe_id}
+                customerId={order?.customer_id}
+                location={order?.location}
+                onComplete={() => handleComplete(order.order_id)}
+                onCancel={() => handleCancel(order.order_id)}
+                active={false}
+                UserStatus={orderstatus}
+                type={order?.type}
+              />
+              <div className="w-full border rounded-lg overflow-hidden">
+                <MapsCard
+                  latitude={parseFloat(order?.latitude) || 0}
+                  longitude={parseFloat(order?.longitude) || 0}
+                />
+              </div>
+            </div>
+          ))
+        ) : (
           <div className="w-full text-center text-gray-500 py-10">
             <h2 className="text-lg">📭 You have no instant orders.</h2>
           </div>
@@ -812,6 +835,11 @@ const ManageChefOrders = ({ chef_id }) => {
         pendingOrders.map((order) => (
           <div className="flex gap-2 w-full">
             {/* Instant Order Card for fetched orderData */}
+            <Button
+              onClick={() => handleClashCheck(order.order_id, order.chef_id)}
+            >
+              check clashes
+            </Button>
             <OrderCard
               title={order?.title}
               imageUrl={getImgUrl(order.recipe_id)}
@@ -1076,12 +1104,16 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
                   {new Date(order?.order_date).toLocaleString()}
                 </td>
                 <td class="px-6 py-4">
-                {order.type === 'ADVANCE' && (
-                  <div className='w-full bg-purple-600 text-white font-light text-sm rounded-lg text-center p-1 px-2'>ADVANCE</div>
-                )}
-                {order.type === 'INSTANT' && (
-                  <div className='w-full bg-green-500 text-white font-light text-sm rounded-lg text-center p-1 px-2'>INSTANT</div>
-                )}
+                  {order.type === "ADVANCE" && (
+                    <div className="w-full bg-purple-600 text-white font-light text-sm rounded-lg text-center p-1 px-2">
+                      ADVANCE
+                    </div>
+                  )}
+                  {order.type === "INSTANT" && (
+                    <div className="w-full bg-green-500 text-white font-light text-sm rounded-lg text-center p-1 px-2">
+                      INSTANT
+                    </div>
+                  )}
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex items-center">

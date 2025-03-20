@@ -399,7 +399,6 @@ router.post("/instant", async (req, res) => {
     const activeRequestKey = `instant_booking:${chef_id}`;
     const existingRequest = await redisClient.get(activeRequestKey);
 
-
     if (existingRequest) {
       const data = JSON.parse(existingRequest);
 
@@ -1452,9 +1451,10 @@ router.post("/advance", async (req, res) => {
   }
 });
 
-router.get("/check/:id", async (req, res) => {
-  const chef_id = req.body.chef_id;
-  const order_id = req.params.id;
+router.get("/check/:order_id/:chef_id", async (req, res) => {
+  const chef_id = req.params.chef_id;
+  const order_id = req.params.order_id;
+  console.log("Checking for order clashes...", chef_id, order_id);
 
   if (!chef_id || !order_id) {
     return res.status(400).json({
@@ -1619,10 +1619,15 @@ router.get("/advance/startorder/:chef_id/:order_id", async (req, res) => {
     }
 
     const key = `chef_cur_order:${chef_id}`;
-    
+
     await redisClient.set(key, order_id); // Set with a 1-hour expiry
 
-    res.json({success: true, message: "Chef order tracking started", chef_id, order_id });
+    res.json({
+      success: true,
+      message: "Chef order tracking started",
+      chef_id,
+      order_id,
+    });
   } catch (error) {
     console.error("Error starting order tracking:", error);
     res.status(500).json({ error: "Internal server error" });
@@ -1638,11 +1643,15 @@ router.get("/advance/curorder/:chef_id", async (req, res) => {
     }
 
     const key = `chef_cur_order:${chef_id}`;
-    
+
     const order_id = await redisClient.get(key);
 
     if (!order_id) {
-      return res.json({ chef_id, order_id: null, message: "No active order found" });
+      return res.json({
+        chef_id,
+        order_id: null,
+        message: "No active order found",
+      });
     }
 
     res.json({ chef_id, order_id });

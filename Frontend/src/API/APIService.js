@@ -251,6 +251,18 @@ const APIService = {
     }
   },
 
+  async checkAdvancedClashes(chef_id, order_id) {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/orders/check/${chef_id}/${order_id}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching clashes:", error);
+      throw error.response?.data || { message: "Failed to fetch booking." };
+    }
+  },
+
   async confirmAdvanceBooking(order_id) {
     try {
       const response = await axios.post(

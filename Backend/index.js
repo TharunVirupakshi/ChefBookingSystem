@@ -1,6 +1,10 @@
 const express = require('express');
 const cors = require('cors')
 const cron = require("node-cron");
+const multer = require("multer");
+const fs = require("fs");
+const path = require("path");
+
 const app = express()
 app.use(cors())
 const router = express.Router()
@@ -14,6 +18,66 @@ const offsetHrs = 3600000 * 2; // 1hr
 // mockDateTime.setMockDateTime(offsetHrs)
 console.log("MockDateTime: ", mockDateTime.getMockDateTime().toLocaleString())
 console.log("PG MockDateTime: ", mockDateTime.getPGMockDateTime())
+
+const imagesDir = path.join(__dirname, "imagesDB", "Images")
+const dataFile = path.join(__dirname, "imagesDB", "imagesMap.json")
+
+// Ensure images directory exists
+if (!fs.existsSync(imagesDir)) {
+  fs.mkdirSync(imagesDir, { recursive: true });
+}else{
+  console.error("ImageDB DIR error") 
+}
+
+// Load or initialize the mapping file
+let imagesMap = {};
+if (fs.existsSync(dataFile)) {
+  imagesMap = JSON.parse(fs.readFileSync(dataFile));
+}else{
+  console.error("ImageDB MAP error")
+}
+
+
+// Configure Multer for file uploads
+const storage = multer.diskStorage({
+  destination: imagesDir,
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    const filename = `${Date.now()}${ext}`;
+    cb(null, filename);
+  },
+});
+const upload = multer({ storage });
+
+// **Upload an Image and Update JSON**
+app.post("/upload", upload.single("image"), (req, res) => {
+  const { recipeId } = req.body;
+  if (!recipeId || !req.file) {
+    return res.status(400).json({ error: "Missing recipeId or image" });
+  }
+
+  imagesMap[recipeId] = req.file.filename;
+
+  fs.writeFileSync(dataFile, JSON.stringify(imagesMap, null, 2));
+
+  res.json({ message: "Image uploaded successfully", filename: req.file.filename });
+});
+
+
+// **Get Image URL by Recipe ID**
+app.get("/getImage/:recipeId", (req, res) => {
+  const { recipeId } = req.params;
+  const filename = imagesMap[recipeId];
+
+  if (filename) {
+    res.json({ imageUrl: `${req.protocol}://${req.get("host")}/images/${filename}` });
+  } else {
+    res.json({ imageUrl: `${req.protocol}://${req.get("host")}/images/generic.png` }); // Default image
+  }
+});
+
+// Serve static files from the images directory
+app.use("/images", express.static(path.join(__dirname, "imagesDB/Images")));
 
 client.connect()
     .then(()=>console.log("Connected to Postgres"))

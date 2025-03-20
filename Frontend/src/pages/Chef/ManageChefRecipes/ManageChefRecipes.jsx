@@ -60,7 +60,7 @@ const ManageChefRecipes = () => {
   if (!chefid) return; // Wait until chefid is set
 
   try {
-    const response = await fetch(`http://localhost:3000/api/recipes/${chefid}`, {
+    const response = await fetch(`http://localhost:3000/api/recipes/chef/${chefid}`, {
       method: "GET",
       headers: { "Content-Type": "application/json" },
     });

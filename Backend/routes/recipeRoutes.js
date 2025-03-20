@@ -2,6 +2,9 @@ const express = require("express");
 const client = require("../config/db");
 const router = express.Router();
 const Joi = require("joi");
+const {getImageUrl} = require("../utils/images")
+
+
 
 router.get("/", async (req, res) => {
   try {
@@ -12,7 +15,14 @@ router.get("/", async (req, res) => {
        WHERE recipe.deleted_at IS NULL`
     );
 
-    res.status(200).json(result.rows);
+    // Add imageUrl for each recipe
+    const recipesWithImages = result.rows.map((recipe) => ({
+      ...recipe,
+      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(recipe.recipe_id)}`,
+    }));
+    
+
+    res.status(200).json(recipesWithImages);
   } catch (error) {
     console.error("Error fetching recipes:", error);
     res.status(500).json({ message: "Error fetching recipes" });
@@ -20,22 +30,7 @@ router.get("/", async (req, res) => {
 });
 
 
-router.get("/chef/:id" , async(req,res)=>{
-  const { id } = req.params;
-  try {
-    const result = await client.query(
-      "SELECT * FROM recipe WHERE chef_id = $1", 
-      [id] 
-    );
-    if (result.rows.length === 0) {
-      return res.status(404).json({ message: "No recipes found for this chef" });
-    }
-    res.status(200).json(result.rows);
-  } catch (error) {
-    console.error("Error fetching recipes:", error.message);
-    res.status(500).json({ message: "Error fetching recipes" });
-  }
-})
+
 
 //Fetch recipe by recipe_id
 router.get("/:recipe_id", async (req, res) => {
@@ -71,14 +66,39 @@ router.get("/:recipe_id", async (req, res) => {
 
     const chef = chefResult.rows[0];
 
+    const img = `${req.protocol}://${req.get("host")}/${getImageUrl(parseInt(recipe_id))}`;
+
     // Include chef's full name in the response
-    res.status(200).json({ ...recipe, chef_full_name: chef.full_name });
+    res.status(200).json({ ...recipe, chef_full_name: chef.full_name, recipe_img: img });
   } catch (error) {
-    console.error("Error fetching recipe:", error.message);
+    console.error("Error fetching recipe by ID:", error.message);
     res.status(500).json({ message: "Error fetching recipe" });
   }
 });
 
+router.get("/chef/:id" , async(req,res)=>{
+  const { id } = req.params;
+  try {
+    const result = await client.query(
+      "SELECT * FROM recipe WHERE chef_id = $1", 
+      [id] 
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "No recipes found for this chef" });
+    }
+
+     // Add imageUrl for each recipe
+     const recipesWithImages = result.rows.map((recipe) => ({
+      ...recipe,
+      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(parseInt(recipe.recipe_id))}`,
+    }));
+
+    res.status(200).json(recipesWithImages);
+  } catch (error) {
+    console.error("Error fetching recipes by chef ID:", error.message);
+    res.status(500).json({ message: "Error fetching recipes" });
+  }
+})
 
 
 // Fetch all recipes or filter by chef_id and recipe_id
@@ -97,8 +117,14 @@ router.get("/:chef_id/:recipe_id", async (req, res) => {
       return res.status(404).json({ message: "Recipe not found for this chef" });
     }
 
+     // Add imageUrl for each recipe
+     const recipesWithImages = result.rows.map((recipe) => ({
+      ...recipe,
+      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(parseInt(recipe.recipe_id))}`,
+    }));
+
     // Return the recipe data
-    res.status(200).json(result.rows);
+    res.status(200).json(recipesWithImages);
   } catch (error) {
     console.error("Error fetching recipe:", error.message);
     res.status(500).json({ message: "Error fetching recipe" });
@@ -130,7 +156,7 @@ const recipeCreateValidationSchema = Joi.object({
   booking_type: Joi.string()
     .valid("instant", "advance") // Updated to match the database constraint
     .required(),
-  image_url:Joi.string()
+  image_url:Joi.string().allow("").optional()
 });
 
 // Schema for updating a recipe (PUT)
@@ -147,7 +173,7 @@ const recipeUpdateValidationSchema = Joi.object({
   price: Joi.number().positive().precision(2),
   is_vegetarian: Joi.boolean(),
   booking_type: Joi.string().valid("instant", "advance"), // Updated to match the database constraint
-  image_url:Joi.string()
+  image_url:Joi.string().optional()
 });
 
 

@@ -363,7 +363,7 @@ const AddUpdateRecipeModal = ({ isOpen, onClose, onAddRecipe ,onUpdateRecipe, se
           <div>
             <label className="block mb-1">Chef ID</label>
             <input
-              type="number"
+              type="text"
               name="chef_id"
               value={formik.values.chef_id}
               onChange={formik.handleChange}
@@ -376,6 +376,10 @@ const AddUpdateRecipeModal = ({ isOpen, onClose, onAddRecipe ,onUpdateRecipe, se
             {formik.errors.chef_id && formik.touched.chef_id && (
               <div className="text-red-500 text-sm">{formik.errors.chef_id}</div>
             )}
+          </div>
+          <div>
+            <label className="block mb-1">Chef Name</label>
+            <p>{selectedRecipe?.chef_full_name || ""}</p>
           </div>
 
           <div>

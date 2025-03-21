@@ -110,16 +110,17 @@ async function cleanupExpiredOrders() {
       await client.query("BEGIN"); // Start transaction
   
       
-      const mockNowFormatted = mockDateTime.getPGMockDateTime(); // Convert to SQL format (without timezone)
-  
+      const mockNowFormatted = new Date().toISOString().slice(0, 19).replace("T", " ");; // Convert to SQL format (without timezone)
+      
+
       // Cancel orders older than 3 hours
       const cancelQuery = `
         UPDATE orders 
         SET status = 'CANCELLED' 
-        WHERE status NOT IN ('CANCELLED', 'COMPLETED', 'REJECTED', 'PENDING') 
-        AND $1::timestamp - end_date_time > INTERVAL '3 hours';
+        WHERE status IN ('CONFIRMED')
+        AND NOW() - end_date_time > INTERVAL '3 hours';
       `;
-      const cancelResult = await client.query(cancelQuery, [mockNowFormatted]);
+      const cancelResult = await client.query(cancelQuery);
       console.log(`Cancelled ${cancelResult.rowCount} expired orders.`);
   
       // Reject PENDING orders older than 4 hours

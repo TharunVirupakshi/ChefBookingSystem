@@ -40,6 +40,7 @@ import InstantOrderStatus from "./pages/User/ManageUserOrders/InstantOrderStatus
 import AdvancedOrderPage from "./pages/User/ManageUserOrders/AdvancedOrderPage";
 import Dashboard from "./pages/Admin/AdminDashboard/Dashboard";
 import ManageChefLocation from "./pages/Chef/ManageChefLocation/ManageChefLocation";
+import Dashboard from "./pages/Admin/AdminDashboard/Dashboard";
 
 function App() {
   const navigate = useNavigate();

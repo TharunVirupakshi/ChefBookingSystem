@@ -19,6 +19,7 @@ const APIService = {
   async fetchChefById(chefId) {
     try {
       const response = await axios.get(`${API_BASE_URL}/chefs/${chefId}`);
+      console.log("Chef by ID:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching chef by ID:", error);
@@ -60,19 +61,21 @@ const APIService = {
   // Update chef status
   async updateChefStatus(chefId, status) {
     try {
-
       const token = await getIDToken();
-          
-      const headers ={
+
+      const headers = {
         Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'  
-      }
+        "Content-Type": "application/json",
+      };
 
-
-      const response = await axios.put(`${API_BASE_URL}/chefs/status`, {
-        chef_id: chefId,
-        status: status
-      },{headers});
+      const response = await axios.put(
+        `${API_BASE_URL}/chefs/status`,
+        {
+          chef_id: chefId,
+          status: status,
+        },
+        { headers }
+      );
       return response.data;
     } catch (error) {
       console.error("Error updating chef status:", error);
@@ -177,15 +180,16 @@ const APIService = {
 
   async fetchAllOrdersByChefId(chef_id) {
     try {
-      
       const token = await getIDToken();
-          
-      const headers ={
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'  
-      }
 
-      const response = await axios.get(`${API_BASE_URL}/orders/${chef_id}`, {headers});
+      const headers = {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      };
+
+      const response = await axios.get(`${API_BASE_URL}/orders/${chef_id}`, {
+        headers,
+      });
       return response.data;
     } catch (error) {
       console.error("Error fetching all orders by chef_id:", error);
@@ -476,9 +480,8 @@ const APIService = {
   //Fetch recipes based on recipe_id
   async fetchRecipesByRecipeId(RecipeId) {
     try {
-      const response = await axios.get(
-        `${API_BASE_URL}/recipes/recipe/${RecipeId}`
-      );
+      const response = await axios.get(`${API_BASE_URL}/recipes/${RecipeId}`);
+      console.log("Response:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error fetching recipes by RecipeId:", error);

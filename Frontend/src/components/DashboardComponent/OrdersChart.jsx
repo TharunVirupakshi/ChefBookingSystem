@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-} from "recharts";
+import { PieChart, Pie, Cell, Tooltip, Legend } from "recharts";
 import APIService from "../../API/APIService";
 
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7f50", "#a52a2a"];
@@ -20,6 +10,15 @@ const OrdersChart = ({ insightType }) => {
   const [selectedYear, setSelectedYear] = useState("All");
   const [selectedOrderType, setSelectedOrderType] = useState("ALL");
 
+  const [recipesData, setRecipesData] = useState([]);
+  const [chefsData, setChefsData] = useState([]);
+
+  const [mostOrderedRecipe, setMostOrderedRecipe] = useState(null);
+  const [leastOrderedRecipe, setLeastOrderedRecipe] = useState(null);
+  const [mostOrdersChef, setMostOrdersChef] = useState(null);
+  const [leastOrdersChef, setLeastOrdersChef] = useState(null);
+
+  // Fetch orders when insight type or order type changes
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -28,6 +27,51 @@ const OrdersChart = ({ insightType }) => {
         const rawOrders = response.orders || [];
 
         setOrdersData(rawOrders);
+
+        const filteredOrders = getFilteredOrders(rawOrders);
+
+        if (insightType === "recipe") {
+          const recipes = await aggregateOrdersByRecipe(filteredOrders);
+          setRecipesData(recipes);
+
+          setMostOrderedRecipe(
+            recipes.reduce(
+              (max, current) =>
+                current.value > (max?.value || 0) ? current : max,
+              null
+            )
+          );
+
+          setLeastOrderedRecipe(
+            recipes.reduce(
+              (min, current) =>
+                min === null || current.value < min.value ? current : min,
+              null
+            )
+          );
+        }
+
+        if (insightType === "chef") {
+          const chefs = await aggregateOrdersByChef(filteredOrders);
+          setChefsData(chefs);
+
+          setMostOrdersChef(
+            chefs.reduce(
+              (max, current) =>
+                current.value > (max?.value || 0) ? current : max,
+              null
+            )
+          );
+
+          setLeastOrdersChef(
+            chefs.reduce(
+              (min, current) =>
+                min === null || current.value < min.value ? current : min,
+              null
+            )
+          );
+        }
+
         setLoading(false);
       } catch (error) {
         console.error("Error fetching data:", error);
@@ -36,19 +80,16 @@ const OrdersChart = ({ insightType }) => {
     };
 
     fetchData();
-  }, [insightType]);
+  }, [insightType, selectedOrderType]);
 
-  // Filter orders based on selected order type
-  const getFilteredOrders = () => {
-    if (selectedOrderType === "ALL") return ordersData;
-    return ordersData.filter(
+  const getFilteredOrders = (orders = ordersData) => {
+    if (selectedOrderType === "ALL") return orders;
+    return orders.filter(
       (order) => order.type?.toUpperCase() === selectedOrderType
     );
   };
 
-  const filteredOrders = getFilteredOrders();
-
-  // Aggregation functions
+  // Aggregation Functions
   const aggregateOrdersByMonth = (orders) => {
     const result = {};
     orders.forEach((order) => {
@@ -65,27 +106,34 @@ const OrdersChart = ({ insightType }) => {
     });
   };
 
-  const aggregateOrdersByRecipe = (orders) => {
+  const aggregateOrdersByRecipe = async (orders) => {
     const result = {};
-    orders.forEach((order) => {
-      const recipeId = order.recipe_id || "Unknown Recipe";
-      result[recipeId] = (result[recipeId] || 0) + 1;
-    });
+    for (const order of orders) {
+      const recipeId = order.recipe_id || "Unknown";
+      const recipe = await APIService.fetchRecipesByRecipeId(recipeId);
+      const recipeName = recipe?.title || `Recipe ${recipeId}`;
 
-    return Object.entries(result).map(([recipeId, count]) => ({
-      recipe: `Recipe ${recipeId}`,
+      result[recipeName] = (result[recipeName] || 0) + 1;
+    }
+
+    return Object.entries(result).map(([recipe, count]) => ({
+      recipe,
       value: count,
     }));
   };
-  const aggregateOrdersByChef = (orders) => {
-    const result = {};
-    orders.forEach((order) => {
-      const chefId = order.chef_id || "Unknown Chef";
-      result[chefId] = (result[chefId] || 0) + 1;
-    });
 
-    return Object.entries(result).map(([chefId, count]) => ({
-      chef: `Chef ${chefId}`,
+  const aggregateOrdersByChef = async (orders) => {
+    const result = {};
+    for (const order of orders) {
+      const chefId = order.chef_id || "Unknown";
+      const chef = await APIService.fetchChefById(chefId);
+      const chefName = chef?.full_name || `Chef ${chefId}`;
+
+      result[chefName] = (result[chefName] || 0) + 1;
+    }
+
+    return Object.entries(result).map(([chef, count]) => ({
+      chef,
       value: count,
     }));
   };
@@ -103,8 +151,10 @@ const OrdersChart = ({ insightType }) => {
     }));
   };
 
-  // Derived data
+  // Derived Data
+  const filteredOrders = getFilteredOrders();
   const ordersByMonth = aggregateOrdersByMonth(filteredOrders);
+
   const availableYears = Array.from(
     new Set(ordersByMonth.map((entry) => entry.year))
   ).sort((a, b) => b - a);
@@ -114,32 +164,13 @@ const OrdersChart = ({ insightType }) => {
       ? ordersByMonth
       : ordersByMonth.filter((entry) => entry.year === parseInt(selectedYear));
 
-  const recipesData = aggregateOrdersByRecipe(filteredOrders);
   const orderTypeData = aggregateOrdersByType(filteredOrders);
-
-  const mostOrderedRecipe = recipesData.reduce((max, current) => {
-    return current.value > (max?.value || 0) ? current : max;
-  }, null);
-
-  const leastOrderedRecipe = recipesData.reduce((min, current) => {
-    return min === null || current.value < min.value ? current : min;
-  }, null);
-
-  const chefsData = aggregateOrdersByChef(filteredOrders);
-
-  const mostOrdersChef = chefsData.reduce((max, current) => {
-    return current.value > (max?.value || 0) ? current : max;
-  }, null);
-
-  const leastOrdersChef = chefsData.reduce((min, current) => {
-    return min === null || current.value < min.value ? current : min;
-  }, null);
 
   if (loading) return <p>Loading...</p>;
 
   return (
     <div>
-      {/* Order Type Selector (Visible for all insights) */}
+      {/* Order Type Filter */}
       <div style={{ marginBottom: "20px" }}>
         <label htmlFor="order-type-select">Filter by Order Type: </label>
         <select
@@ -153,9 +184,10 @@ const OrdersChart = ({ insightType }) => {
         </select>
       </div>
 
+      {/* Orders Insight */}
       {insightType === "orders" && (
         <div>
-          {/* Year Selector */}
+          {/* Year Filter */}
           <div style={{ marginBottom: "20px" }}>
             <label htmlFor="year-select">Filter by Year: </label>
             <select
@@ -179,26 +211,26 @@ const OrdersChart = ({ insightType }) => {
                 📈 Month with most orders:{" "}
                 <strong>
                   {
-                    filteredOrdersData.reduce((max, current) => {
-                      return current.orders > (max?.orders || 0)
-                        ? current
-                        : max;
-                    }, null)?.month
+                    filteredOrdersData.reduce(
+                      (max, current) =>
+                        current.orders > (max?.orders || 0) ? current : max,
+                      null
+                    )?.month
                   }{" "}
                   {
-                    filteredOrdersData.reduce((max, current) => {
-                      return current.orders > (max?.orders || 0)
-                        ? current
-                        : max;
-                    }, null)?.year
+                    filteredOrdersData.reduce(
+                      (max, current) =>
+                        current.orders > (max?.orders || 0) ? current : max,
+                      null
+                    )?.year
                   }{" "}
                   (
                   {
-                    filteredOrdersData.reduce((max, current) => {
-                      return current.orders > (max?.orders || 0)
-                        ? current
-                        : max;
-                    }, null)?.orders
+                    filteredOrdersData.reduce(
+                      (max, current) =>
+                        current.orders > (max?.orders || 0) ? current : max,
+                      null
+                    )?.orders
                   }{" "}
                   orders)
                 </strong>
@@ -207,26 +239,32 @@ const OrdersChart = ({ insightType }) => {
                 📉 Month with least orders:{" "}
                 <strong>
                   {
-                    filteredOrdersData.reduce((min, current) => {
-                      return min === null || current.orders < min.orders
-                        ? current
-                        : min;
-                    }, null)?.month
+                    filteredOrdersData.reduce(
+                      (min, current) =>
+                        min === null || current.orders < min.orders
+                          ? current
+                          : min,
+                      null
+                    )?.month
                   }{" "}
                   {
-                    filteredOrdersData.reduce((min, current) => {
-                      return min === null || current.orders < min.orders
-                        ? current
-                        : min;
-                    }, null)?.year
+                    filteredOrdersData.reduce(
+                      (min, current) =>
+                        min === null || current.orders < min.orders
+                          ? current
+                          : min,
+                      null
+                    )?.year
                   }{" "}
                   (
                   {
-                    filteredOrdersData.reduce((min, current) => {
-                      return min === null || current.orders < min.orders
-                        ? current
-                        : min;
-                    }, null)?.orders
+                    filteredOrdersData.reduce(
+                      (min, current) =>
+                        min === null || current.orders < min.orders
+                          ? current
+                          : min,
+                      null
+                    )?.orders
                   }{" "}
                   orders)
                 </strong>
@@ -234,32 +272,43 @@ const OrdersChart = ({ insightType }) => {
             </div>
           )}
 
-          <PieChart width={600} height={400}>
-            <Pie
-              data={filteredOrdersData}
-              cx="50%"
-              cy="50%"
-              outerRadius={150}
-              dataKey="orders"
-              nameKey="month"
-              label={({ month, orders, percent }) =>
-                `${month}: ${orders} orders (${(percent * 100).toFixed(0)}%)`
-              }
-              fill="#8884d8"
-            >
-              {filteredOrdersData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
+          {/* Pie Chart */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: "40px",
+            }}
+          >
+            <PieChart width={600} height={400}>
+              <Pie
+                data={filteredOrdersData}
+                cx="50%"
+                cy="50%"
+                outerRadius={150}
+                dataKey="orders"
+                nameKey="month"
+                label={({ month, orders, percent }) =>
+                  `${month}: ${orders} orders (${(percent * 100).toFixed(0)}%)`
+                }
+                fill="#8884d8"
+              >
+                {filteredOrdersData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </div>
         </div>
       )}
 
+      {/* Recipe Insight */}
       {insightType === "recipe" && (
         <div>
           <div style={{ marginBottom: "20px" }}>
@@ -277,33 +326,66 @@ const OrdersChart = ({ insightType }) => {
               </strong>
             </p>
           </div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: "40px",
+            }}
+          >
+            <PieChart width={700} height={500}>
+              <Pie
+                data={recipesData}
+                cx="50%"
+                cy="50%"
+                outerRadius={200}
+                dataKey="value"
+                nameKey="recipe"
+                label={({
+                  cx,
+                  cy,
+                  midAngle,
+                  innerRadius,
+                  outerRadius,
+                  index,
+                }) => {
+                  const RADIAN = Math.PI / 180;
+                  const radius = innerRadius + (outerRadius - innerRadius) + 30;
+                  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                  const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
-          <PieChart width={600} height={400}>
-            <Pie
-              data={recipesData}
-              cx="50%"
-              cy="50%"
-              outerRadius={150}
-              dataKey="value"
-              nameKey="recipe"
-              label={({ recipe, value, percent }) =>
-                `${recipe}: ${value} orders (${(percent * 100).toFixed(0)}%)`
-              }
-              fill="#8884d8"
-            >
-              {recipesData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
+                  return (
+                    <text
+                      x={x}
+                      y={y}
+                      fill="black"
+                      textAnchor={x > cx ? "start" : "end"}
+                      dominantBaseline="central"
+                      style={{ fontSize: "12px" }}
+                    >
+                      {`${recipesData[index].recipe}: ${recipesData[index].value} orders`}
+                    </text>
+                  );
+                }}
+                labelLine={false}
+                fill="#8884d8"
+              >
+                {recipesData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </div>
         </div>
       )}
 
+      {/* Chef Insight */}
       {insightType === "chef" && (
         <div>
           <div style={{ marginBottom: "20px" }}>
@@ -321,29 +403,38 @@ const OrdersChart = ({ insightType }) => {
             </p>
           </div>
 
-          <PieChart width={600} height={400}>
-            <Pie
-              data={chefsData}
-              cx="50%"
-              cy="50%"
-              outerRadius={150}
-              dataKey="value"
-              nameKey="chef"
-              label={({ chef, value, percent }) =>
-                `${chef}: ${value} orders (${(percent * 100).toFixed(0)}%)`
-              }
-              fill="#8884d8"
-            >
-              {chefsData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={COLORS[index % COLORS.length]}
-                />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend />
-          </PieChart>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              marginBottom: "40px",
+            }}
+          >
+            <PieChart width={600} height={400}>
+              <Pie
+                data={chefsData}
+                cx="50%"
+                cy="50%"
+                outerRadius={150}
+                dataKey="value"
+                nameKey="chef"
+                label={({ chef, value, percent }) =>
+                  `${chef}: ${value} orders (${(percent * 100).toFixed(0)}%)`
+                }
+                fill="#8884d8"
+              >
+                {chefsData.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </div>
         </div>
       )}
     </div>

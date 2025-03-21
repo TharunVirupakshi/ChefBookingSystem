@@ -38,9 +38,10 @@ import UserOrder from "./pages/User/ManageUserOrders/UserOrder";
 import OrderPage from "./pages/User/ManageUserOrders/OrderPage";
 import InstantOrderStatus from "./pages/User/ManageUserOrders/InstantOrderStatus";
 import AdvancedOrderPage from "./pages/User/ManageUserOrders/AdvancedOrderPage";
-import Dashboard from "./pages/Admin/AdminDashboard/Dashboard";
 import ManageChefLocation from "./pages/Chef/ManageChefLocation/ManageChefLocation";
 import Dashboard from "./pages/Admin/AdminDashboard/Dashboard";
+import ContactPage from "./pages/ContactPage";
+import AboutPage from "./pages/AboutPage";
 
 function App() {
   const navigate = useNavigate();
@@ -106,6 +107,8 @@ function App() {
             }
           >
             <Route path="/" element={<HomePage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
             <Route path="recipe/:id" element={<UserOrder />} />
             <Route
               path="instant-order"

@@ -132,7 +132,6 @@ function App() {
                     element={<ManageChefOrders chef_id={userId} />}
                   />
                   <Route path="recipe" element={<ManageChefRecipes />} />
-                  <Route path="location" element={<ManageChefLocation />} />
                 </Route>
                 <Route path="admin" element={<AdminDashboard />}>
                   <Route index element={<Navigate to="insights" replace />} />

@@ -13,6 +13,14 @@ const authenticateToken = async (req, res, next) => {
   }
 };
 
+const authenticateChef = (req, res, next) => {
+  if (req.user && req.user.chef) {
+      next(); // User is an admin, proceed to the next middleware or route handler
+  } else {
+      res.status(403).json({ success: false, message: 'Access denied: Chefs only.' });
+  }
+}; 
+
 const authenticateAdmin = (req, res, next) => {
   if (req.user && req.user.admin) {
       next(); // User is an admin, proceed to the next middleware or route handler
@@ -21,4 +29,4 @@ const authenticateAdmin = (req, res, next) => {
   }
 };
 
-module.exports = { authenticateToken, authenticateAdmin };
+module.exports = { authenticateToken, authenticateAdmin, authenticateChef };

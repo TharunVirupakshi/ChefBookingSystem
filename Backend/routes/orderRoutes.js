@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require("uuid"); // For generating unique req_id
 const redisService = require("../services/redisService");
 const { sendFCMNotification } = require("../services/notificationService");
 const redisClient = require("../config/redisCache");
+const {authenticateAdmin, authenticateChef, authenticateToken} = require("../middleware/authMiddleware")
 
 router.get("/", async (req, res) => {
   try {
@@ -57,7 +58,7 @@ router.get("/blocked-dates", async (req, res) => {
   }
 });
 
-router.get("/:chef_id", async (req, res) => {
+router.get("/:chef_id",authenticateToken, authenticateChef, async (req, res) => {
   const { chef_id } = req.params;
 
   if (!chef_id) {

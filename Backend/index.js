@@ -19,14 +19,12 @@ const offsetHrs = 3600000 * 2; // 1hr
 console.log("MockDateTime: ", mockDateTime.getMockDateTime().toLocaleString())
 console.log("PG MockDateTime: ", mockDateTime.getPGMockDateTime())
 
-const imagesDir = path.join(__dirname, "imagesDB", "Images")
+const imagesDir = path.join(__dirname, "imagesDB/Images")
 const dataFile = path.join(__dirname, "imagesDB", "imagesMap.json")
 
 // Ensure images directory exists
 if (!fs.existsSync(imagesDir)) {
   fs.mkdirSync(imagesDir, { recursive: true });
-}else{
-  console.error("ImageDB DIR error") 
 }
 
 // Load or initialize the mapping file
@@ -118,7 +116,7 @@ async function cleanupExpiredOrders() {
       const cancelQuery = `
         UPDATE orders 
         SET status = 'CANCELLED' 
-        WHERE status NOT IN ('CANCELLED', 'COMPLETED') 
+        WHERE status NOT IN ('CANCELLED', 'COMPLETED', 'REJECTED', 'PENDING') 
         AND $1::timestamp - end_date_time > INTERVAL '3 hours';
       `;
       const cancelResult = await client.query(cancelQuery, [mockNowFormatted]);
@@ -129,7 +127,7 @@ async function cleanupExpiredOrders() {
         UPDATE orders 
         SET status = 'REJECTED' 
         WHERE status = 'PENDING' 
-        AND $1::timestamp - end_date_time > INTERVAL '4 hours';
+        AND $1::timestamp - order_date > INTERVAL '4 hours';
       `;
       const rejectResult = await client.query(rejectQuery, [mockNowFormatted]);
       console.log(`Rejected ${rejectResult.rowCount} pending orders.`);

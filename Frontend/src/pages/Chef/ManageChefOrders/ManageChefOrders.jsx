@@ -673,7 +673,7 @@ const ManageChefOrders = ({ chef_id }) => {
           return (
             order.type === "ADVANCE" &&
             date.toLocaleDateString() === new Date().toLocaleDateString() &&
-            !["COMPLETED", "CANCELLED", "PENDING"].includes(order.status)
+            order.status === "CONFIRMED"
           );
         });
 
@@ -705,10 +705,13 @@ const ManageChefOrders = ({ chef_id }) => {
         //  // Store customer data
         //  setCustomerData(customers);
       } catch (error) {
+        toast.error("Error fetching orders: " + error?.response?.data || "")
         console.error(
           "Error fetching completed orders, recipes and customers :",
           error
         );
+
+        
       }
     };
 
@@ -751,7 +754,7 @@ const ManageChefOrders = ({ chef_id }) => {
               : "bg-green-500 hover:bg-green-600 text-white" // Display READY styles when BUSY
           }`}
         >
-          {status === "READY" ? "BUSY" : "READY"}
+          {status === "READY" ? "Set BUSY" : "Set READY"}
         </button>
       </div>
       <h1 className="font-normal text-xl text-gray-500">Instant Orders</h1>
@@ -1168,7 +1171,7 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
                           ? "bg-purple-500"
                           : order.status === "PENDING"
                           ? "bg-yellow-300"
-                          : order.status === "CANCELLED"
+                          : order.status === "CANCELLED" || order.status === "REJECTED"
                           ? "bg-red-500"
                           : "bg-gray-500"
                       } h-2.5 w-2.5 rounded-full me-2`}
@@ -1329,7 +1332,7 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
                         ? "bg-purple-500"
                         : currentOrder?.status === "PENDING"
                         ? "bg-yellow-300"
-                        : currentOrder?.status === "CANCELLED"
+                        : currentOrder?.status === "CANCELLED" || currentOrder?.status === "REJECTED"
                         ? "bg-red-500"
                         : "bg-gray-500"
                     } h-2.5 w-2.5 rounded-full me-2 inline-block`}

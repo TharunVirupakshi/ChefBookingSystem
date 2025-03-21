@@ -4,7 +4,8 @@ const client = require('../config/db');
 const { saveFCMToken, getChefStatus } = require('../services/redisService');
 const {admin} = require('../config/firebase');
 const Joi = require('joi');
-const { updateChefStatus, updateChefLocation, getChefLocation } = require('../services/redisService')
+const { updateChefStatus, updateChefLocation, getChefLocation } = require('../services/redisService');
+const { authenticateToken, authenticateChef } = require('../middleware/authMiddleware');
 require('dotenv').config();
 
 router.get('/', async (req, res) => {
@@ -152,7 +153,7 @@ router.get('/status/:chef_id', async(req, res)=>{
         }
 })
 
-router.put('/status', async(req, res) => {
+router.put('/status', authenticateToken, authenticateChef,async(req, res) => {
     const { chef_id, status } = req.body;
 
     if(!chef_id || !status){

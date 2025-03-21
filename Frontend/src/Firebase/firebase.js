@@ -24,4 +24,15 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const messaging = getMessaging(app);
 export const storage = getStorage(app);
+export const getIDToken = () => {
+  return auth.currentUser?.getIdToken(true)
+    .then(idToken => {
+      return idToken;
+    })
+    .catch(err => {
+      console.log('Err: Invalid Auth Token Firebase', err);
+      throw err; // Re-throw the error to handle it where the function is called
+    });
+};
+
 export default app;

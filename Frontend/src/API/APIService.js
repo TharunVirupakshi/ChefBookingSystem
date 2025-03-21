@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getIDToken } from "../Firebase/firebase";
 
 const API_BASE_URL = "http://localhost:3000/api";
 
@@ -59,10 +60,19 @@ const APIService = {
   // Update chef status
   async updateChefStatus(chefId, status) {
     try {
+
+      const token = await getIDToken();
+          
+      const headers ={
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'  
+      }
+
+
       const response = await axios.put(`${API_BASE_URL}/chefs/status`, {
         chef_id: chefId,
-        status: status,
-      });
+        status: status
+      },{headers});
       return response.data;
     } catch (error) {
       console.error("Error updating chef status:", error);
@@ -167,7 +177,15 @@ const APIService = {
 
   async fetchAllOrdersByChefId(chef_id) {
     try {
-      const response = await axios.get(`${API_BASE_URL}/orders/${chef_id}`);
+      
+      const token = await getIDToken();
+          
+      const headers ={
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'  
+      }
+
+      const response = await axios.get(`${API_BASE_URL}/orders/${chef_id}`, {headers});
       return response.data;
     } catch (error) {
       console.error("Error fetching all orders by chef_id:", error);

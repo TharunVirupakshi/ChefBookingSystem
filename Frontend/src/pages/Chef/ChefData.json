@@ -8,5 +8,10 @@
     "title":"My Recipes",
     "type":"normal",
     "path":"/dashboard/chef/recipe"
+   },  
+   {
+    "title":"My Location",
+    "type":"normal",
+    "path":"/dashboard/chef/location"
    }  
 ]

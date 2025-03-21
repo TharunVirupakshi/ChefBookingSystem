@@ -39,6 +39,7 @@ import OrderPage from "./pages/User/ManageUserOrders/OrderPage";
 import InstantOrderStatus from "./pages/User/ManageUserOrders/InstantOrderStatus";
 import AdvancedOrderPage from "./pages/User/ManageUserOrders/AdvancedOrderPage";
 import Dashboard from "./pages/Admin/AdminDashboard/Dashboard";
+import ManageChefLocation from "./pages/Chef/ManageChefLocation/ManageChefLocation";
 
 function App() {
   const navigate = useNavigate();
@@ -127,6 +128,7 @@ function App() {
                     element={<ManageChefOrders chef_id={userId} />}
                   />
                   <Route path="recipe" element={<ManageChefRecipes />} />
+                  <Route path="location" element={<ManageChefLocation />} />
                 </Route>
                 <Route path="admin" element={<AdminDashboard />}>
                   <Route index element={<Navigate to="insights" replace />} />

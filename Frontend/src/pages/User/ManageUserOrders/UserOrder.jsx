@@ -229,7 +229,7 @@ const fetchLocation = async () => {
 
   return (
     <>
-      <div className="p-14 w-screen">
+      <div className="p-12 w-screen">
         <div className="flex flex-wrap  items-center gap-10">
           <div className="flex-2 w-72 h-96">
             <img
@@ -240,11 +240,11 @@ const fetchLocation = async () => {
           </div>
 
           <div className="flex-1">
-            <span className="text-3xl font-semibold text-slate-600">
+            <span className="text-xl font-semibold text-slate-600">
               {recipeData?.title}
             </span>
             <div className="w-3/4">
-              <p className="text-base mt-3 line-clamp-4 text-justify">
+              <p className="text-sm mt-3 line-clamp-4 text-justify">
                 {recipeData?.description}
               </p>
             </div>
@@ -265,35 +265,40 @@ const fetchLocation = async () => {
             </div>
             <br />
 
-            <div className="inline-flex items-center gap-3">
-              <span>Specialty: </span>{" "}
-              <span className="text-lg font-semibold text-gray-600">
-                {chefData?.specialty}
-              </span>
-            </div>
-            <br />
-
-            <div className="inline-flex items-center gap-3">
-              <span>Bio: </span>{" "}
-              <span className="text-lg font-semibold text-gray-600">
-                {chefData?.bio}
-              </span>
-            </div>
-            <br />
-
-            <div className="inline-flex items-center gap-3">
-              <span>Chef's Rating: </span>
-              <ChefRating chef={chefData} />
-            </div>
-            <br />
-
-            <div className="my-3">
-              <span className="text-green-500 text-xl font-semibold">
-                Price: ₹{recipeData?.price}
-              </span>
+            <div className="text-justify">
+              <p>
+                Specialty:
+                <br />
+                <span className="text-gray-600 text-xs">
+                  {chefData?.specialty}
+                </span>
+              </p>
             </div>
 
-            <div className="my-10 flex flex-col gap-4">
+            <div className="text-justify">
+              <p>
+                Bio:
+                <br />
+                <span className="text-gray-600 text-xs ">{chefData?.bio}</span>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-5">
+
+            <div >
+              <div className="inline-flex items-center gap-3">
+                <span>Chef's Rating: </span>
+                <ChefRating chef={chefData} />
+              </div>
+
+              <div className="my-3">
+                <span className="text-green-500 text-xl font-semibold">
+                  Price: ₹{recipeData?.price}
+                </span>
+              </div>
+            </div>
+
+            <div className="my-8 flex flex-col gap-4">
               {/* Display message when item is not available for instant booking */}
               {recipeType === "advance" && (
                 <p className="text-red-500 text-xs">
@@ -308,8 +313,7 @@ const fetchLocation = async () => {
                 <button
                   onClick={openLocationPicker}
                   className="text-white bg-green-500 hover:bg-green-600 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  
-                  disabled={recipeType === 'advance'}
+                  disabled={recipeType === "advance"}
                 >
                   Order Now
                 </button>
@@ -322,6 +326,7 @@ const fetchLocation = async () => {
                   Advance Booking
                 </button>
               </div>
+            </div>
             </div>
           </div>
         </div>
@@ -336,7 +341,7 @@ const fetchLocation = async () => {
           <p className="text-sm text-justify">{recipeData?.ingredients}</p>
         </div>
       </div>
-      
+
       {/* Flowbite Modal for Location Selection */}
       <Modal show={isModalOpen} onClose={() => setIsModalOpen(false)}>
         <Modal.Header>Select Your Location</Modal.Header>
@@ -357,27 +362,33 @@ const fetchLocation = async () => {
                 />
 
             </div>  */}
-            
-            <GoogleMapComponent 
+
+            <GoogleMapComponent
               defaultLocation={{
                 lat: parseFloat(userGeolocation.lat),
-                lng: parseFloat(userGeolocation.long)
-              }} 
-              onLocationSelect={(loc) => setUserGeolocation({lat: loc.lat, long: loc.lng})}
+                lng: parseFloat(userGeolocation.long),
+              }}
+              onLocationSelect={(loc) =>
+                setUserGeolocation({ lat: loc.lat, long: loc.lng })
+              }
             />
-
           </div>
         </Modal.Body>
         <Modal.Footer>
-         <div className="w-full flex justify-center gap-5">
-         <button onClick={handleOrderNow} className="text-white px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600">
-            Proceed
-          </button>
-          <button onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400">
-            Cancel
-          </button>
-         </div>
-          
+          <div className="w-full flex justify-center gap-5">
+            <button
+              onClick={handleOrderNow}
+              className="text-white px-4 py-2 rounded-lg bg-green-500 hover:bg-green-600"
+            >
+              Proceed
+            </button>
+            <button
+              onClick={() => setIsModalOpen(false)}
+              className="px-4 py-2 rounded-lg bg-gray-300 hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+          </div>
         </Modal.Footer>
       </Modal>
     </>

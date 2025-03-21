@@ -930,6 +930,7 @@ export default ManageChefOrders;
 const Table = ({ completedOrders = [], completedRecipes = [] }) => {
   const [customerData, setCustomerData] = useState([]);
   const [currentOrder, setCurrentOrder] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     initFlowbite();
@@ -947,36 +948,55 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
     }
   };
 
+
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+
+  // Debounce function to update search query after a delay
+  useEffect(() => {
+      const handler = setTimeout(() => {
+          setDebouncedQuery(searchQuery);
+      }, 300); // 300ms delay (adjustable)
+
+      return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Filter function
+  const filteredOrders = completedOrders.filter((order) => {
+      const query = debouncedQuery.toLowerCase().trim();
+
+      const match = query.match(/(id|date|type|price|status):(.+)/);
+      if (match) {
+          const [, key, value] = match;
+          switch (key) {
+              case "id":
+                  return order?.order_id?.toString().includes(value.trim());
+              case "date":
+                  return (new Date(order?.order_date).toLocaleString()).includes(value.trim());
+              case "type":
+                  return order?.type?.toLowerCase().includes(value.trim());
+              case "price":
+                  return order?.price?.toString().includes(value.trim());
+              case "status":
+                  return order?.status?.toLowerCase().includes(value.trim());
+              default:
+                  return false;
+          }
+      }
+
+      return (
+          order?.title?.toLowerCase().includes(query) ||
+          order?.order_id?.toString().includes(query)
+      );
+  });
+
+
   console.log("customerdata", customerData);
 
   return (
     <div class="relative overflow-x-auto shadow-md sm:rounded-lg p-2">
       <div class="flex items-center justify-between flex-column md:flex-row flex-wrap space-y-4 md:space-y-0 py-4 bg-white dark:bg-gray-900">
         <div>
-          <button
-            id="dropdownActionButton"
-            data-dropdown-toggle="dropdownAction"
-            class="inline-flex items-center text-gray-500 bg-white border border-gray-300 focus:outline-none hover:bg-gray-100 focus:ring-4 focus:ring-gray-100 font-medium rounded-lg text-sm px-3 py-1.5 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700"
-            type="button"
-          >
-            <span class="sr-only">Action button</span>
-            Action
-            <svg
-              class="w-2.5 h-2.5 ms-2.5"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 10 6"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="m1 1 4 4 4-4"
-              />
-            </svg>
-          </button>
+          
 
           <div
             id="dropdownAction"
@@ -1045,8 +1065,10 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
           <input
             type="text"
             id="table-search-users"
-            class="block pt-2 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-            placeholder="Search"
+            className="block pt-2 pl-10 text-sm text-gray-900 border border-gray-300 rounded-lg w-80 bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+            placeholder="Search by order ID or title"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
@@ -1086,7 +1108,7 @@ const Table = ({ completedOrders = [], completedRecipes = [] }) => {
           </tr>
         </thead>
         <tbody>
-          {completedOrders.map((order, index) => {
+          {filteredOrders.map((order, index) => {
             // Flatten the completedRecipes array (if it's an array of arrays)
             {
               /* const flattenedRecipes = completedRecipes.flat(); */

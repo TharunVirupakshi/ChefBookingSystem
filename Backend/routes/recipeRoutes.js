@@ -2,9 +2,7 @@ const express = require("express");
 const client = require("../config/db");
 const router = express.Router();
 const Joi = require("joi");
-const {getImageUrl} = require("../utils/images")
-
-
+const { getImageUrl } = require("../utils/images");
 
 router.get("/", async (req, res) => {
   try {
@@ -18,9 +16,10 @@ router.get("/", async (req, res) => {
     // Add imageUrl for each recipe
     const recipesWithImages = result.rows.map((recipe) => ({
       ...recipe,
-      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(recipe.recipe_id)}`,
+      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(
+        recipe.recipe_id
+      )}`,
     }));
-    
 
     res.status(200).json(recipesWithImages);
   } catch (error) {
@@ -29,23 +28,22 @@ router.get("/", async (req, res) => {
   }
 });
 
-
-
-
 //Fetch recipe by recipe_id
 router.get("/:recipe_id", async (req, res) => {
-
-  console.log("Fetching recipe")
+  console.log("Fetching recipe");
   const { recipe_id } = req.params;
 
-  if(!recipe_id){
-    console.log("Recipe id is null")
-    return
+  if (!recipe_id) {
+    console.log("Recipe id is null");
+    return;
   }
 
   try {
     // Fetch recipe details
-    const result = await client.query("SELECT * FROM recipe WHERE recipe_id = $1", [recipe_id]);
+    const result = await client.query(
+      "SELECT * FROM recipe WHERE recipe_id = $1",
+      [recipe_id]
+    );
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "Recipe not found" });
     }
@@ -58,7 +56,10 @@ router.get("/:recipe_id", async (req, res) => {
     }
 
     // Fetch chef details
-    const chefResult = await client.query("SELECT full_name FROM chef WHERE chef_id = $1", [chef_id]);
+    const chefResult = await client.query(
+      "SELECT full_name FROM chef WHERE chef_id = $1",
+      [chef_id]
+    );
 
     if (chefResult.rows.length === 0) {
       return res.status(404).json({ message: "Chef not found" });
@@ -66,31 +67,39 @@ router.get("/:recipe_id", async (req, res) => {
 
     const chef = chefResult.rows[0];
 
-    const img = `${req.protocol}://${req.get("host")}/${getImageUrl(parseInt(recipe_id))}`;
+    const img = `${req.protocol}://${req.get("host")}/${getImageUrl(
+      parseInt(recipe_id)
+    )}`;
 
     // Include chef's full name in the response
-    res.status(200).json({ ...recipe, chef_full_name: chef.full_name, recipe_img: img });
+    res
+      .status(200)
+      .json({ ...recipe, chef_full_name: chef.full_name, recipe_img: img });
   } catch (error) {
     console.error("Error fetching recipe by ID:", error.message);
     res.status(500).json({ message: "Error fetching recipe" });
   }
 });
 
-router.get("/chef/:id" , async(req,res)=>{
+router.get("/chef/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const result = await client.query(
-      "SELECT * FROM recipe WHERE chef_id = $1", 
-      [id] 
+      "SELECT * FROM recipe WHERE chef_id = $1",
+      [id]
     );
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "No recipes found for this chef" });
+      return res
+        .status(404)
+        .json({ message: "No recipes found for this chef" });
     }
 
-     // Add imageUrl for each recipe
-     const recipesWithImages = result.rows.map((recipe) => ({
+    // Add imageUrl for each recipe
+    const recipesWithImages = result.rows.map((recipe) => ({
       ...recipe,
-      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(parseInt(recipe.recipe_id))}`,
+      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(
+        parseInt(recipe.recipe_id)
+      )}`,
     }));
 
     res.status(200).json(recipesWithImages);
@@ -98,8 +107,7 @@ router.get("/chef/:id" , async(req,res)=>{
     console.error("Error fetching recipes by chef ID:", error.message);
     res.status(500).json({ message: "Error fetching recipes" });
   }
-})
-
+});
 
 // Fetch all recipes or filter by chef_id and recipe_id
 router.get("/:chef_id/:recipe_id", async (req, res) => {
@@ -114,13 +122,17 @@ router.get("/:chef_id/:recipe_id", async (req, res) => {
 
     // If no recipe is found, return 404
     if (result.rows.length === 0) {
-      return res.status(404).json({ message: "Recipe not found for this chef" });
+      return res
+        .status(404)
+        .json({ message: "Recipe not found for this chef" });
     }
 
-     // Add imageUrl for each recipe
-     const recipesWithImages = result.rows.map((recipe) => ({
+    // Add imageUrl for each recipe
+    const recipesWithImages = result.rows.map((recipe) => ({
       ...recipe,
-      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(parseInt(recipe.recipe_id))}`,
+      recipe_img: `${req.protocol}://${req.get("host")}/${getImageUrl(
+        parseInt(recipe.recipe_id)
+      )}`,
     }));
 
     // Return the recipe data
@@ -130,10 +142,6 @@ router.get("/:chef_id/:recipe_id", async (req, res) => {
     res.status(500).json({ message: "Error fetching recipe" });
   }
 });
-
-
-
-
 
 const recipeCreateValidationSchema = Joi.object({
   chef_id: Joi.string().required(),
@@ -156,7 +164,7 @@ const recipeCreateValidationSchema = Joi.object({
   booking_type: Joi.string()
     .valid("instant", "advance") // Updated to match the database constraint
     .required(),
-  image_url:Joi.string().allow("").optional()
+  image_url: Joi.string().allow("").optional(),
 });
 
 // Schema for updating a recipe (PUT)
@@ -173,11 +181,10 @@ const recipeUpdateValidationSchema = Joi.object({
   price: Joi.number().positive().precision(2),
   is_vegetarian: Joi.boolean(),
   booking_type: Joi.string().valid("instant", "advance"), // Updated to match the database constraint
-  image_url:Joi.string().optional()
+  image_url: Joi.string().optional(),
 });
 
-
-// Create Recipe  
+// Create Recipe
 router.post("/", async (req, res) => {
   console.log("Incoming data:", req.body);
   const { error, value } = recipeCreateValidationSchema.validate(req.body);
@@ -195,7 +202,7 @@ router.post("/", async (req, res) => {
     price,
     is_vegetarian,
     booking_type,
-    image_url
+    image_url,
   } = value;
   try {
     const query = `
@@ -213,7 +220,7 @@ router.post("/", async (req, res) => {
       price,
       is_vegetarian,
       booking_type,
-      image_url
+      image_url,
     ]);
     console.log("Recipe got saved to Postgres:", result.rows[0]);
     return res.status(200).json({
@@ -258,7 +265,7 @@ router.put("/", async (req, res) => {
     price,
     is_vegetarian,
     booking_type,
-    image_url
+    image_url,
   } = value;
 
   try {
@@ -335,8 +342,8 @@ router.delete("/", async (req, res) => {
   const recipeId = req.query.recipe_id;
   console.log("Deleting recipe with ID:", recipeId);
   try {
-   // Update the 'deleted_at' column with the current timestamp for the given recipe_id
-   const query = `
+    // Update the 'deleted_at' column with the current timestamp for the given recipe_id
+    const query = `
       UPDATE recipe
       SET deleted_at = NOW()
       WHERE recipe_id = $1

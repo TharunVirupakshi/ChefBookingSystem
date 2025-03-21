@@ -1,18 +1,22 @@
 [
-    {
-     "title":"Manage Recipes",
-     "type":"normal",
-     "path":"/dashboard/admin/recipe"
-    },
-    {
-     "title":"Manage Customers",
-     "type":"normal",
-     "path":"/dashboard/admin/customers"
-    },  
-    {
-     "title":"Manage Orders",
-     "type":"normal",
-     "path":"/dashboard/admin/orders"
-    }
-   
- ]
+  {
+    "title": "Insights",
+    "type": "normal",
+    "path": "/dashboard/admin/insights"
+  },
+  {
+    "title": "Manage Recipes",
+    "type": "normal",
+    "path": "/dashboard/admin/recipe"
+  },
+  {
+    "title": "Manage Customers",
+    "type": "normal",
+    "path": "/dashboard/admin/customers"
+  },
+  {
+    "title": "Manage Orders",
+    "type": "normal",
+    "path": "/dashboard/admin/orders"
+  }
+]

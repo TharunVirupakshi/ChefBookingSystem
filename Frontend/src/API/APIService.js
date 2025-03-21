@@ -518,6 +518,17 @@ const APIService = {
       throw error.response?.data || { message: "Error deleting recipe" };
     }
   },
+  async getOrderInsights() {
+    try {
+      console.log("Fetching insights");
+      const response = await axios.get(`${API_BASE_URL}/orders/insights/get`);
+      console.log("Insights fetched:", response.data);
+      return response.data;
+    } catch (err) {
+      console.error("Error fetching insights:", err);
+      throw err.response?.data || { message: "Error fetching insights" };
+    }
+  },
 };
 
 export default APIService;

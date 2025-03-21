@@ -1499,11 +1499,12 @@ router.get("/check/:order_id/:chef_id", async (req, res) => {
       [chef_id, currentOrder.start_date_time, order_id]
     );
 
-    
     const remainingOrders = remainingOrdersResult.rows;
-    
-    console.log("[CLASH CHECK] Orders on the same date as cur order: ", 
-    remainingOrders.map(o => o.order_id))
+
+    console.log(
+      "[CLASH CHECK] Orders on the same date as cur order: ",
+      remainingOrders.map((o) => o.order_id)
+    );
 
     const clashingOrders = [];
 
@@ -1541,7 +1542,7 @@ router.get("/check/:order_id/:chef_id", async (req, res) => {
           destLoc,
           curEndTime
         );
-        console.log("[CLASH CHECK] TRAVEL CLASH BEFORE: ",tailETA)
+        console.log("[CLASH CHECK] TRAVEL CLASH BEFORE: ", tailETA);
 
         const arrivalTime = new Date(curEndTime.getTime() + tailETA * 60000);
 
@@ -1568,7 +1569,7 @@ router.get("/check/:order_id/:chef_id", async (req, res) => {
           { lat: latitude, long: longitude },
           otherEndTime
         );
-        console.log("[CLASH CHECK] TRAVEL CLASH AFTER: ",headETA)
+        console.log("[CLASH CHECK] TRAVEL CLASH AFTER: ", headETA);
         const arrivalTime = new Date(otherEndTime.getTime() + headETA * 60000);
 
         if (arrivalTime > curOrderStart) {
@@ -1666,7 +1667,18 @@ router.get("/advance/curorder/:chef_id", async (req, res) => {
   }
 });
 
-// Helper: Get ETA (in minutes) 
+router.get("/insights/get", async (req, res) => {
+  console.log("Fetching insights...");
+  try {
+    const ordersResult = await client.query(`SELECT * FROM orders`);
+    res.status(200).json({ orders: ordersResult.rows });
+  } catch (err) {
+    console.error("Error retrieving insights:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Helper: Get ETA (in minutes)
 const getETA = async (origin, destination, departureDate) => {
   const departureTimeSec = Math.floor(new Date(departureDate).getTime() / 1000);
   const url = `https://routes.googleapis.com/directions/v2:computeRoutes`;
@@ -1684,7 +1696,9 @@ const getETA = async (origin, destination, departureDate) => {
     },
     travelMode: "DRIVE", // Change to "WALK", "BICYCLE", or "TRANSIT" if needed
     routingPreference: "TRAFFIC_AWARE", // Consider real-time traffic data
-    departureTime: departureTimeSec ? new Date(departureTimeSec * 1000).toISOString() : undefined,
+    departureTime: departureTimeSec
+      ? new Date(departureTimeSec * 1000).toISOString()
+      : undefined,
     computeAlternativeRoutes: false,
   };
 
@@ -1707,8 +1721,7 @@ const getETA = async (origin, destination, departureDate) => {
 
   // Convert seconds to minutes
   const seconds = data.routes[0]?.duration.split("s")[0];
-  return  parseInt(seconds)/ 60;
+  return parseInt(seconds) / 60;
 };
-
 
 module.exports = router;

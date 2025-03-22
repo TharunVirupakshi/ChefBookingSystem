@@ -130,16 +130,16 @@ const fetchLocation = async () => {
 
     switch (error.code) {
       case error.PERMISSION_DENIED:
-        alert("You denied the location request. Please enable location services.");
+        toast.error("You denied the location request. Please enable location services.");
         break;
       case error.POSITION_UNAVAILABLE:
-        alert("Location information is unavailable. Retrying...");
+        toast.error("Location information is unavailable. Retrying...");
         break;
       case error.TIMEOUT:
-        alert("The request to get user location timed out. Retrying...");
+        toast.error("The request to get user location timed out. Retrying...");
         break;
       default:
-        alert("An unknown error occurred.");
+        // alert("An unknown error occurred.");
         break;
     }
 

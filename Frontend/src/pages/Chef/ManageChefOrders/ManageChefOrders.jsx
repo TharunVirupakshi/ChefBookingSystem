@@ -300,10 +300,10 @@ const ManageChefOrders = ({ chef_id }) => {
     console.log("Recipe ID:", recipe_id);
     console.log("Chef Location:", chefGeolocation);
 
-    if (!chefGeolocation || !chefGeolocation.lat || !chefGeolocation.long) {
-      toast.error("Geolocation is missing or invalid.");
-      return;
-    }
+    // if (!chefGeolocation || !chefGeolocation.lat || !chefGeolocation.long) {
+    //   toast.error("Geolocation is missing or invalid.");
+    //   return;
+    // }
 
     try {
       console.log("Sending API Request:", {
@@ -311,8 +311,8 @@ const ManageChefOrders = ({ chef_id }) => {
         customer_id,
         recipe_id,
         response: "ACCEPT",
-        latitude: chefGeolocation.lat,
-        longitude: chefGeolocation.long,
+        latitude: 0,
+        longitude: 0,
       });
 
       const result = await APIService.sendInstantResponse(
@@ -320,8 +320,8 @@ const ManageChefOrders = ({ chef_id }) => {
         customer_id,
         recipe_id,
         "ACCEPT",
-        chefGeolocation.lat,
-        chefGeolocation.long
+        0,
+        0
       );
 
       console.log("Accept response: ", result);

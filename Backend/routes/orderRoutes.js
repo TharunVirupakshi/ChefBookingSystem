@@ -60,7 +60,7 @@ router.get("/blocked-dates", async (req, res) => {
 
 router.get("/:chef_id",authenticateToken, authenticateChef, async (req, res) => {
   const { chef_id } = req.params;
-
+ 
   if (!chef_id) {
     return res.status(400).json({ message: "chef_id is required" });
   }
@@ -815,8 +815,8 @@ router.post("/instant/response", async (req, res) => {
             "PENDING",
             reqDataJson.latitude,
             reqDataJson.longitude,
-            chef_latitude,
-            chef_longitude,
+            0,
+            0,
           ]
         );
 

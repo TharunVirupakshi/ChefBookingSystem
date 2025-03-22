@@ -131,6 +131,7 @@ function App() {
                     path="orders"
                     element={<ManageChefOrders chef_id={userId} />}
                   />
+                  <Route path="location" element={<ManageChefLocation/>}/>
                   <Route path="recipe" element={<ManageChefRecipes />} />
                 </Route>
                 <Route path="admin" element={<AdminDashboard />}>
@@ -139,6 +140,7 @@ function App() {
                   <Route path="recipe" element={<ManageRecipes />} />
                   <Route path="customers" element={<ManageCustomers />} />
                   <Route path="orders" element={<ManageOrders />} />
+
                 </Route>
               </Route>
             </Route>
